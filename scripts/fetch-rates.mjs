@@ -5,6 +5,8 @@
  * 数据源：
  *   - 中国银行外汇牌价（HTML）
  *   - 工商银行人民币即期外汇牌价（JSON API）
+ *   - 招商银行外汇实时汇率（JSON API）
+ *   - 交通银行外汇牌价（HTML）
  *   - ExchangeRate-API 中间价（JSON）
  *
  * 生成 assets/rates.js。银行牌价统一换算为“人民币 / 1 外币”。
@@ -18,6 +20,9 @@ import crypto from "node:crypto";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const BOC_URL = "https://www.boc.cn/sourcedb/whpj/";
 const ICBC_URL = "https://papi.icbc.com.cn/exchanges/ns/getLatest";
+const CMB_URL = "https://fx.cmbchina.com/api/v1/fx/rate";
+const BOCOM_URL =
+  "https://www.bankcomm.com/BankCommSite/shtml/jyjr/cn/7158/list.shtml?channelId=7158&anchor=goSCYJ";
 const MID_URL = "https://open.er-api.com/v6/latest/CNY";
 
 const CURRENCIES = {
@@ -42,7 +47,7 @@ const BOC_NAME_TO_CODE = Object.fromEntries(
 );
 
 /*
- * 中行/工行的网关仍启用了 legacy renegotiation，Node 24 的默认 OpenSSL
+ * 部分银行网关仍启用了 legacy renegotiation，Node 24 的默认 OpenSSL
  * 设置会直接拒绝握手。这里只对公开牌价请求重新打开该兼容选项。
  */
 const legacyAgent = new https.Agent({
@@ -139,6 +144,56 @@ function parseIcbc(payload) {
   return result;
 }
 
+function parseCmb(payload) {
+  const result = {};
+  for (const item of payload.body || []) {
+    const code = String(item.ccyNbrEng || "").match(/([A-Z]{3})\s*$/)?.[1];
+    if (!code || !CURRENCIES[code]) continue;
+
+    const buy = Number.parseFloat(item.rthBid);
+    const sell = Number.parseFloat(item.rthOfr);
+    if (!Number.isFinite(buy) || !Number.isFinite(sell)) continue;
+
+    result[code] = {
+      buy: Number((buy / 100).toFixed(8)),
+      sell: Number((sell / 100).toFixed(8)),
+      published: `${item.ratDat} ${item.ratTim}`
+    };
+  }
+  return result;
+}
+
+function parseBocom(html) {
+  const names = {
+    美元USD: "USD",
+    欧元EUR: "EUR",
+    英镑GBP: "GBP",
+    澳元AUD: "AUD"
+  };
+  const result = {};
+
+  for (const row of html.matchAll(/<tr>([\s\S]*?)<\/tr>/g)) {
+    const cells = Array.from(row[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)).map((cell) =>
+      cell[1].replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").trim()
+    );
+    if (cells.length < 3) continue;
+
+    const code = names[cells[0]];
+    if (!code) continue;
+
+    const buy = Number.parseFloat(cells[1]);
+    const sell = Number.parseFloat(cells[2]);
+    if (!Number.isFinite(buy) || !Number.isFinite(sell)) continue;
+
+    result[code] = {
+      buy: Number((buy / 100).toFixed(8)),
+      sell: Number((sell / 100).toFixed(8)),
+      published: ""
+    };
+  }
+  return result;
+}
+
 function asOfLabel(date) {
   const parts = new Intl.DateTimeFormat("zh-CN", {
     timeZone: "Asia/Shanghai",
@@ -168,6 +223,22 @@ async function main() {
   );
   const icbc = parseIcbc(icbcPayload);
 
+  console.log("Fetching CMB quotes...");
+  let cmb = {};
+  try {
+    cmb = parseCmb(JSON.parse(await getText(CMB_URL)));
+  } catch (error) {
+    console.warn(`CMB quotes unavailable: ${error.message}`);
+  }
+
+  console.log("Fetching BOCOM quotes...");
+  let bocom = {};
+  try {
+    bocom = parseBocom(await getText(BOCOM_URL));
+  } catch (error) {
+    console.warn(`BOCOM quotes unavailable: ${error.message}`);
+  }
+
   console.log("Fetching mid-market rates...");
   const midPayload = JSON.parse(await getText(MID_URL));
   if (midPayload.result !== "success") {
@@ -179,11 +250,24 @@ async function main() {
     if (!icbc[code]) throw new Error(`ICBC missing ${code}`);
     if (!midPayload.rates[code]) throw new Error(`Mid-market missing ${code}`);
   }
+  if (!cmb.USD) console.warn("CMB USD quote missing; CMB cards will use BOC fallback.");
+  if (!bocom.USD) console.warn("BOCOM USD quote missing; BOCOM cards will use BOC fallback.");
+
+  if (!cmb.USD) cmb = {};
+  if (!bocom.USD) bocom = {};
 
   const mid = {};
   for (const code of Object.keys(CURRENCIES)) {
     mid[code] = Number((1 / midPayload.rates[code]).toFixed(8));
   }
+
+  const compactRates = (rates) =>
+    Object.fromEntries(
+      Object.entries(rates).map(([code, value]) => [
+        code,
+        { buy: value.buy, sell: value.sell }
+      ])
+    );
 
   const now = new Date();
   const data = {
@@ -195,6 +279,11 @@ async function main() {
         name: "工商银行人民币即期外汇牌价",
         url: "https://www.icbc.com.cn/column/1438058341489590354.html"
       },
+      { name: "招商银行外汇实时汇率", url: "https://fx.cmbchina.com/hq/" },
+      {
+        name: "交通银行外汇牌价",
+        url: "https://www.bankcomm.com/BankCommSite/shtml/jyjr/cn/7158/list.shtml?channelId=7158"
+      },
       { name: "ExchangeRate-API 中间价", url: "https://www.exchangerate-api.com/" }
     ],
     mid,
@@ -203,23 +292,25 @@ async function main() {
         label: "中国银行",
         short: "中行",
         updated: boc.USD.published.split(" ")[1]?.slice(0, 5) || "",
-        rates: Object.fromEntries(
-          Object.keys(CURRENCIES).map((code) => [
-            code,
-            { buy: boc[code].buy, sell: boc[code].sell }
-          ])
-        )
+        rates: compactRates(boc)
       },
       icbc: {
         label: "中国工商银行",
         short: "工行",
         updated: icbc.USD.published.split(" ")[1]?.slice(0, 5) || "",
-        rates: Object.fromEntries(
-          Object.keys(CURRENCIES).map((code) => [
-            code,
-            { buy: icbc[code].buy, sell: icbc[code].sell }
-          ])
-        )
+        rates: compactRates(icbc)
+      },
+      cmb: {
+        label: "招商银行",
+        short: "招行",
+        updated: cmb.USD?.published.split(" ")[1]?.slice(0, 5) || "",
+        rates: compactRates(cmb)
+      },
+      bocom: {
+        label: "交通银行",
+        short: "交行",
+        updated: "",
+        rates: compactRates(bocom)
       }
     },
     networkBps: {
@@ -244,6 +335,8 @@ async function main() {
   console.log(`Wrote ${target}`);
   console.log(`BOC USD sell: ${data.banks.boc.rates.USD.sell}`);
   console.log(`ICBC USD sell: ${data.banks.icbc.rates.USD.sell}`);
+  console.log(`CMB USD sell: ${data.banks.cmb.rates.USD?.sell ?? "n/a"}`);
+  console.log(`BOCOM USD sell: ${data.banks.bocom.rates.USD?.sell ?? "n/a"}`);
   console.log(`Snapshot: ${data.asOfLabel}`);
 }
 

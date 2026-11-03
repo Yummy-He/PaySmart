@@ -6,7 +6,7 @@
     <title>择卡 — 这一刻，刷哪张卡？</title>
     <meta
       name="description"
-      content="输入一笔外币消费，比较银行购汇、卡组织人民币入账、美元中转和银联通道的预计人民币成本。"
+      content="输入一笔外币消费，比较中行、工行、招行、交行的银行购汇、卡组织人民币入账、美元中转和银联通道的预计人民币成本。"
     />
     <meta name="theme-color" content="#ffffff" />
     <meta name="color-scheme" content="light" />
@@ -49,9 +49,9 @@
             </p>
             <div class="hero-meta" aria-label="功能概览">
               <span>5 种支付路径</span>
+              <span>4 家银行</span>
               <span>14 个币种</span>
-              <span>牌价快照计算</span>
-              <span>无追踪</span>
+              <span>本地计算</span>
             </div>
           </div>
 
@@ -97,9 +97,9 @@
                 <div class="cc-bottom">
                   <div>
                     <div class="cc-name">莫奈世界卡</div>
-                    <div class="cc-sub">World Card · BOC FX</div>
+                    <div class="cc-sub">Pure FX · BOC Multi-currency</div>
                   </div>
-                  <div class="cc-fx"><strong>USD</strong><span>settlement</span></div>
+                  <div class="cc-fx"><strong>10</strong><span>currencies</span></div>
                 </div>
               </div>
 
@@ -189,7 +189,7 @@
             <section class="ranking" aria-labelledby="rankingTitle">
               <div class="ranking-head">
                 <h3 id="rankingTitle">全部支付路径</h3>
-                <span>按预计入账从低到高</span>
+                <span>点击切换 · 从低到高</span>
               </div>
               <div class="ranking-list" id="rankingList"></div>
               <div class="ranking-foot">
@@ -280,7 +280,7 @@
               <h2>五种路径，<br />五种账单。</h2>
             </div>
             <p class="section-side">
-              不用记住每张卡。先认出它走哪条路径，汇率和费用就大致有数了。下面每类只放一张代表卡。
+              不用记住每张卡。先认出它走哪条路径，汇率和费用就大致有数了。下面每类给几张代表卡。
             </p>
           </div>
 
@@ -304,16 +304,16 @@
             <article class="type-card">
               <div class="type-top">
                 <span class="type-index">02</span>
-                <span class="type-icon">USD</span>
+                <span class="type-icon">MULTI</span>
               </div>
-              <h3>银行购汇<br />纯外币卡</h3>
-              <p class="type-route">外币消费 → 卡组织折美元 → 银行美元卖出价</p>
+              <h3>银行购汇<br />纯外币多币种</h3>
+              <p class="type-route">外币消费 → 外币账户 → 中行人民币卡购汇转入</p>
               <p class="type-copy">
-                没有人民币账户，就绕不开购汇。以美元账户为例，非美元消费会先被卡组织折成美元，再按银行美元牌价买入。
+                没有人民币账户，但支持多个外币币种。消费直接进入对应外币账户；还款时先用另一张中行人民币卡购汇，再转入外币账户。
               </p>
               <div class="type-bottom">
-                <span class="type-card-tag">中行 莫奈万事达世界卡</span>
-                <span class="type-note">两次转换，取决于美元账户结构。</span>
+                <span class="type-card-tag">中行 莫奈世界卡</span>
+                <span class="type-note">没有人民币账户，需另一张中行卡购汇。</span>
               </div>
             </article>
 
@@ -328,8 +328,8 @@
                 人民币账户直接收单，只经过一次卡组织折算，没有银行购汇环节。路径干净，最终汇率由入账日决定。
               </p>
               <div class="type-bottom">
-                <span class="type-card-tag">中行 万事网联人民币卡</span>
-                <span class="type-note">通常没有货币转换费。</span>
+                <span class="type-card-tag">中行万事网联 / 招行万事达人民币卡</span>
+                <span class="type-note">一次折算，通常没有货币转换费。</span>
               </div>
             </article>
 
@@ -338,13 +338,13 @@
                 <span class="type-index">04</span>
                 <span class="type-icon">V</span>
               </div>
-              <h3>美元中转<br />双币 Visa</h3>
+              <h3>美元中转<br />Visa 双币与全币种</h3>
               <p class="type-route">外币消费 → Visa 折美元 → 银行美元卖出价</p>
               <p class="type-copy">
-                典型的美元账户双币卡：卡组织先折美元，银行再购汇。若再叠加 1.5% 货币转换费，通常是五条路径里最贵的。
+                典型美元账户卡：卡组织先折美元，银行再购汇。招行全币种通常 0 货转；交行双币卡叠加 1.5% 货转后，通常明显更贵。
               </p>
               <div class="type-bottom">
-                <span class="type-card-tag">中行 Visa 双币卡</span>
+                <span class="type-card-tag">招行 全币种 Visa / 交行 Visa 双币卡</span>
                 <span class="type-note">美元消费时，才会少一次转换。</span>
               </div>
             </article>
@@ -364,7 +364,7 @@
                     双标卡走银联网络时，由银联直接折算人民币入账，没有银行购汇环节，通常也没有货币转换费。能否走银联，取决于收单网络；少数套卡若按外币账户入账后再转人民币，成本会更接近“多币种直付”。
                   </p>
                   <div class="type-bottom">
-                    <span class="type-card-tag">工行 银联双标卡</span>
+                    <span class="type-card-tag">工行 银联双标 / 交行 银联环球卡</span>
                     <span class="type-note">和卡组织人民币卡往往只差几个基点。</span>
                   </div>
                 </div>
@@ -424,11 +424,13 @@
 
           <div class="method-foot">
             <p>
-              本页是消费前的决策辅助，不是结算报价。银行牌价取自中国银行、中国工商银行官网快照；中间价来自 ExchangeRate-API；卡组织汇率与卡片费率为可调假设。实际入账金额、汇率时点、返现资格均以发卡行和卡组织为准。若收单方提供动态货币转换（DCC），通常应拒绝人民币定价，选择当地币种结算。
+              本页是消费前的决策辅助，不是结算报价。银行牌价取自中国银行、中国工商银行、招商银行、交通银行官网快照；中间价来自 ExchangeRate-API；卡组织汇率与卡片费率为可调假设。实际入账金额、汇率时点、返现资格均以发卡行和卡组织为准。若收单方提供动态货币转换（DCC），通常应拒绝人民币定价，选择当地币种结算。
             </p>
             <div class="source-links">
-              <a href="https://www.boc.cn/sourcedb/whpj/" target="_blank" rel="noopener noreferrer">中国银行牌价</a>
-              <a href="https://www.icbc.com.cn/column/1438058341489590354.html" target="_blank" rel="noopener noreferrer">工商银行牌价</a>
+              <a href="https://www.boc.cn/sourcedb/whpj/" target="_blank" rel="noopener noreferrer">中国银行</a>
+              <a href="https://www.icbc.com.cn/column/1438058341489590354.html" target="_blank" rel="noopener noreferrer">工商银行</a>
+              <a href="https://fx.cmbchina.com/hq/" target="_blank" rel="noopener noreferrer">招商银行</a>
+              <a href="https://www.bankcomm.com/BankCommSite/shtml/jyjr/cn/7158/list.shtml?channelId=7158" target="_blank" rel="noopener noreferrer">交通银行</a>
               <a href="https://www.exchangerate-api.com/" target="_blank" rel="noopener noreferrer">中间价</a>
             </div>
           </div>

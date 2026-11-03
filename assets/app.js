@@ -12,6 +12,8 @@
     visa: { name: "Visa", en: "Visa" },
     unionpay: { name: "银联", en: "UnionPay" }
   };
+  const BANK_ORDER = ["boc", "icbc", "cmb", "bocom"];
+  const BANK_MARKS = { icbc: "工行", boc: "中行", cmb: "招行", bocom: "交行" };
 
   const DEFAULT_STATE = (() => {
     const cardState = {};
@@ -44,6 +46,7 @@
     currencyLabel: $("#currencyLabel"),
     factRows: $("#factRows"),
     factNote: $("#factNote"),
+    winnerCard: $("#winnerCard"),
     winnerContent: $("#winnerContent"),
     rankingList: $("#rankingList"),
     routeTitle: $("#routeTitle"),
@@ -210,6 +213,16 @@
     };
   }
 
+  function bankRate(card, code, field = "sell") {
+    const own = RATES.banks[card.rateSource]?.rates?.[code]?.[field];
+    if (Number.isFinite(own)) return own;
+    return RATES.banks.boc.rates[code][field];
+  }
+
+  function bankMark(card) {
+    return BANK_MARKS[card.bank] || card.bank.slice(0, 2);
+  }
+
   function computeCard(card) {
     const amount = Math.max(0, Number(state.amount) || 0);
     const code = state.currency;
@@ -217,7 +230,7 @@
     const usdMid = RATES.mid.USD;
     const spread = networkBps(card) / 10000;
     const fees = cardFees(card);
-    const bank = card.rateSource ? RATES.banks[card.rateSource] : null;
+    const bank = RATES.banks[card.rateSource] || RATES.banks.boc;
     const networkName = card.networkLabel;
 
     let base = 0;
@@ -233,20 +246,36 @@
     let missingMultiCurrency = false;
 
     if (card.rail === "multi" && Array.isArray(card.supported) && card.supported.includes(code)) {
-      const bankSell = bank.rates[code].sell;
+      const bankSell = bankRate(card, code, "sell");
+      const fundingTitle =
+        card.funding === "rmb-card"
+          ? `用${bank.short}人民币卡购汇转入`
+          : `按${bank.short}现汇卖出价购汇`;
+      const fundingBody =
+        card.funding === "rmb-card"
+          ? `先在${bank.short}手机银行用人民币卡购汇，再转入这张外币卡；1 ${code} = ${rate(
+              bankSell,
+              code
+            )}。`
+          : `1 ${code} = ${rate(bankSell, code)}。银行点差已经体现在这个价格里。`;
+
       base = amount * bankSell;
       accountAmount = amount;
       effectiveNetworkRate = 1;
-      routeTag = "外币直入";
-      flow = [`${code} 消费`, `${bank.short}外币账户`, "人民币还款"];
+      routeTag = card.directTag || "外币直入";
+      flow = [
+        `${code} 消费`,
+        `${bank.short}外币账户`,
+        card.funding === "rmb-card" ? "人民币卡购汇" : "人民币还款"
+      ];
       steps = [
         {
           title: `${foreign(amount, code)} 直接进入${bank.short}外币账户`,
           body: "交易币种与账户币种一致，不经过卡组织二次折算。"
         },
         {
-          title: `按${bank.short}现汇卖出价购汇`,
-          body: `1 ${code} = ${rate(bankSell, code)}。银行点差已经体现在这个价格里。`
+          title: fundingTitle,
+          body: fundingBody
         }
       ];
       rows = [
@@ -259,7 +288,7 @@
       typeDisplay = "银行购汇 · 多币种（经美元）";
       const usdPerUnit = code === "USD" ? 1 : (mid / usdMid) * (1 + spread);
       const usdAmount = amount * usdPerUnit;
-      const usdSell = bank.rates.USD.sell;
+      const usdSell = bankRate(card, "USD", "sell");
       base = usdAmount * usdSell;
       accountAmount = usdAmount;
       effectiveNetworkRate = usdPerUnit;
@@ -321,7 +350,7 @@
       usedUsd = true;
       const usdPerUnit = code === "USD" ? 1 : (mid / usdMid) * (1 + spread);
       const usdAmount = amount * usdPerUnit;
-      const usdSell = bank.rates.USD.sell;
+      const usdSell = bankRate(card, "USD", "sell");
       base = usdAmount * usdSell;
       accountAmount = usdAmount;
       effectiveNetworkRate = usdPerUnit;
@@ -393,8 +422,15 @@
     let verdict = `${card.pros}。${card.caveat}。`;
     if (missingMultiCurrency) {
       verdict = "该币种不在多币种账户内，实际走美元中转，“直付”的路径优势不成立。";
-    } else if (card.rail === "foreign-usd" && code !== "USD") {
-      verdict = `${card.pros}；但 ${code} 不是美元，卡组织和银行会各折算一次，成本通常更高。`;
+    } else if (card.rail === "foreign-usd") {
+      if (code === "USD") {
+        verdict =
+          fees.feePct > 0
+            ? `美元消费没有卡组织折算，但 ${fees.feePct.toFixed(2)}% 货转费仍会加在账单上。`
+            : "美元消费没有卡组织折算，只需按银行美元现汇卖出价购汇。";
+      } else {
+        verdict = `${card.pros}；但 ${code} 不是美元，卡组织和银行会各折算一次，成本通常更高。`;
+      }
     } else if (card.rail === "cny-card") {
       verdict = `${card.pros}。最终汇率由卡组织入账日决定。`;
     }
@@ -545,58 +581,79 @@
   function renderFactRows() {
     const code = state.currency;
     const mid = RATES.mid[code];
-    const bocSell = RATES.banks.boc.rates[code].sell;
-    const icbcSell = RATES.banks.icbc.rates[code].sell;
+    const bankRows = BANK_ORDER.map((key) => {
+      const bank = RATES.banks[key];
+      const sell = bank?.rates?.[code]?.sell;
+      if (!Number.isFinite(sell)) return "";
+      return `
+        <div class="fact-row">
+          <span>${bank.short}现汇卖出</span>
+          <strong>${rate(sell, code)} <small>${bpsFromMid(sell)}</small></strong>
+        </div>`;
+    }).join("");
 
     dom.factRows.innerHTML = `
       <div class="fact-row">
         <span>1 ${code} 中间价</span>
         <strong>${rate(mid, code)}</strong>
       </div>
-      <div class="fact-row">
-        <span>中行现汇卖出</span>
-        <strong>${rate(bocSell, code)} <small>${bpsFromMid(bocSell)}</small></strong>
-      </div>
-      <div class="fact-row">
-        <span>工行现汇卖出</span>
-        <strong>${rate(icbcSell, code)} <small>${bpsFromMid(icbcSell)}</small></strong>
-      </div>`;
+      ${bankRows}`;
     dom.factNote.innerHTML = `牌价快照 ${RATES.asOfLabel}。卡组织汇率按中间价加点估算，可在下方“汇率与费用假设”中调整。`;
   }
 
-  function renderWinner(winner, results) {
-    if (!winner) return;
+  function renderFocusCard(focus, winner, results) {
+    if (!focus || !winner) return;
     const hasAmount = state.amount > 0;
-    const card = winner.card;
+    const card = focus.card;
+    const isBest = focus.card.id === winner.card.id;
     const mostExpensive = results[results.length - 1];
     const saving = Math.max(0, mostExpensive.total - winner.total);
-    const savingText = hasAmount
-      ? saving >= 0.01
-        ? `比最贵路径省 ${cny(saving)}`
-        : "五种路径几乎持平"
-      : "输入金额后开始计算";
+    const extra = Math.max(0, focus.total - winner.total);
+    let note = "输入金额后开始计算";
 
+    if (hasAmount) {
+      if (isBest) {
+        note = saving >= 0.01 ? `比最贵路径省 ${cny(saving)}` : "各路径几乎持平";
+      } else {
+        note = extra >= 0.005 ? `比最优多 ${cny(extra)}` : "与最优几乎持平";
+      }
+    }
+
+    dom.winnerCard.setAttribute(
+      "aria-label",
+      isBest ? "当前最优选择" : "当前查看的支付路径"
+    );
     dom.winnerContent.innerHTML = `
       <div class="winner-top">
-        <span class="best-badge">当前最优</span>
-        <span class="winner-art art-${card.art}">${card.bank === "中国银行" ? "中行" : "工行"}</span>
+        <span class="best-badge${isBest ? "" : " is-viewing"}">${
+          isBest ? "当前最优" : "当前查看"
+        }</span>
+        <span class="winner-art art-${card.art}">${bankMark(card)}</span>
       </div>
       <div class="winner-main">
         <h3>${card.fullName}</h3>
-        <p class="winner-type">${winner.typeDisplay}</p>
+        <p class="winner-type">${focus.typeDisplay}</p>
         <div class="winner-price">
           <span class="winner-price-label">预计人民币入账</span>
-          <strong class="winner-total">${hasAmount ? cny(winner.total) : "—"}</strong>
-          <span class="winner-saving"><strong>${savingText}</strong></span>
+          <strong class="winner-total">${hasAmount ? cny(focus.total) : "—"}</strong>
+          <span class="winner-saving">
+            <strong>${note}</strong>
+            ${
+              isBest
+                ? ""
+                : '<button class="focus-best-link" type="button" data-best-link>回到最优</button>'
+            }
+          </span>
         </div>
+        <p class="winner-verdict">${focus.verdict}</p>
       </div>
       <div class="winner-footer">
         <div class="winner-rate">
           <span>实际折算率</span>
-          <strong>${hasAmount ? ratePerUnit(winner.effectiveRate, state.currency) : "—"}</strong>
+          <strong>${hasAmount ? ratePerUnit(focus.effectiveRate, state.currency) : "—"}</strong>
         </div>
         <div class="winner-flow">
-          ${winner.flow
+          ${focus.flow
             .map(
               (item, index) =>
                 `${index > 0 ? "<i>→</i>" : ""}<span>${item}</span>`
@@ -610,7 +667,7 @@
     if (state.amount <= 0) return "—";
     if (isBest) return "最优";
     const diff = result.total - winner.total;
-    if (diff < 0.005) return "+¥0.00";
+    if (Math.abs(diff) < 0.005) return "并列最优";
     const pct = winner.total > 0 ? (diff / winner.total) * 100 : 0;
     return `+${cny(diff)} · +${pct.toFixed(2)}%`;
   }
@@ -619,13 +676,14 @@
     dom.rankingList.innerHTML = results
       .map((result, index) => {
         const isBest = result === winner;
+        const isTie = !isBest && Math.abs(result.total - winner.total) < 0.005;
         const isSelected = selectedId
           ? result.card.id === selectedId
           : result.card.id === winner.card.id;
-        const bankMark = result.card.bank === "中国银行" ? "中行" : "工行";
+        const mark = bankMark(result.card);
         return `
           <button
-            class="rank-row${isBest ? " is-best" : ""}"
+            class="rank-row${isBest ? " is-best" : ""}${isTie ? " is-tie" : ""}"
             type="button"
             data-card-id="${result.card.id}"
             aria-expanded="${isSelected}"
@@ -633,7 +691,7 @@
             aria-label="查看 ${result.card.fullName} 的支付路径，预计入账 ${cny(result.total)}"
           >
             <span class="rank-num">${String(index + 1).padStart(2, "0")}</span>
-            <span class="rank-swatch art-${result.card.art}">${bankMark}</span>
+            <span class="rank-swatch art-${result.card.art}">${mark}</span>
             <span class="rank-main">
               <strong>${result.card.fullName}</strong>
               <small>${result.railLabel} · ${result.routeTag}</small>
@@ -695,17 +753,21 @@
   function renderRateTable() {
     const code = state.currency;
     const mid = RATES.mid[code];
-    const bocSell = RATES.banks.boc.rates[code].sell;
-    const icbcSell = RATES.banks.icbc.rates[code].sell;
     const mc = mid * (1 + state.networkBps.mastercard / 10000);
     const visa = mid * (1 + state.networkBps.visa / 10000);
     const up = mid * (1 + state.networkBps.unionpay / 10000);
 
+    const bankRows = BANK_ORDER.map((key) => {
+      const bank = RATES.banks[key];
+      const sell = bank?.rates?.[code]?.sell;
+      if (!Number.isFinite(sell)) return null;
+      return [`${bank.short}现汇卖出`, sell, bpsFromMid(sell)];
+    }).filter(Boolean);
+
     dom.rateTableTitle.textContent = `当前币种牌价 · 1 ${code}`;
     const rows = [
       ["中间价（基准）", mid, "基准"],
-      ["中行现汇卖出", bocSell, bpsFromMid(bocSell)],
-      ["工行现汇卖出", icbcSell, bpsFromMid(icbcSell)],
+      ...bankRows,
       ["万事达人民币入账（估算）", mc, bpsFromMid(mc)],
       ["Visa 人民币入账（估算）", visa, bpsFromMid(visa)],
       ["银联人民币入账（估算）", up, bpsFromMid(up)]
@@ -740,17 +802,25 @@
       currentResults.find((result) => result.card.id === selectedId) || currentWinner;
 
     renderFactRows();
-    renderWinner(currentWinner, currentResults);
+    renderFocusCard(active, currentWinner, currentResults);
     renderRanking(currentWinner, currentResults);
     renderRoute(active);
     renderRateTable();
 
     if (options.announce) {
-      announce(
-        `当前最优是 ${currentWinner.card.fullName}，预计入账 ${cny(
-          currentWinner.total
-        )}。共比较 ${currentResults.length} 条支付路径。`
-      );
+      if (selectedId && active.card.id !== currentWinner.card.id) {
+        announce(
+          `当前查看 ${active.card.fullName}，预计入账 ${cny(
+            active.total
+          )}；最优仍是 ${currentWinner.card.fullName}。`
+        );
+      } else {
+        announce(
+          `当前最优是 ${currentWinner.card.fullName}，预计入账 ${cny(
+            currentWinner.total
+          )}。共比较 ${currentResults.length} 条支付路径。`
+        );
+      }
     }
   }
 
@@ -812,9 +882,25 @@
       updateSelectionUI();
       const detail = currentResults.find((result) => result.card.id === selectedId);
       if (detail) {
+        renderFocusCard(detail, currentWinner, currentResults);
         renderRoute(detail);
-        announce(`已显示 ${detail.card.fullName} 的支付路径，预计入账 ${cny(detail.total)}。`);
+        announce(`已切换到 ${detail.card.fullName}，预计入账 ${cny(detail.total)}。`);
+
+        if (window.matchMedia("(max-width: 900px)").matches) {
+          dom.winnerCard.scrollIntoView({
+            behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+              ? "auto"
+              : "smooth",
+            block: "center"
+          });
+        }
       }
+    });
+
+    dom.winnerContent.addEventListener("click", (event) => {
+      if (!event.target.closest("[data-best-link]")) return;
+      selectedId = null;
+      renderResults({ announce: true });
     });
 
     dom.openAssumptions.addEventListener("click", () => {
@@ -912,5 +998,6 @@
     init();
   }
 })();
+
 
 

@@ -508,6 +508,20 @@ ol {
     linear-gradient(145deg, #f4e9d6 0%, #e2c9a8 52%, #c5a37b 100%);
 }
 
+.art-blue {
+  color: #fff;
+  background:
+    linear-gradient(150deg, rgba(255, 255, 255, 0.18), transparent 44%),
+    linear-gradient(145deg, #6e8df7 0%, #3557c9 52%, #152b72 100%);
+}
+
+.art-forest {
+  color: #fff;
+  background:
+    linear-gradient(150deg, rgba(255, 255, 255, 0.16), transparent 44%),
+    linear-gradient(145deg, #6e9b7c 0%, #35634a 52%, #132f22 100%);
+}
+
 .cc-top {
   position: relative;
   z-index: 1;
@@ -983,6 +997,16 @@ ol {
   background: var(--accent);
 }
 
+.best-badge.is-viewing {
+  border-color: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.58);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.best-badge.is-viewing::before {
+  background: rgba(255, 255, 255, 0.42);
+}
+
 .winner-art {
   display: inline-grid;
   width: 42px;
@@ -1040,6 +1064,7 @@ ol {
 
 .winner-saving {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 7px;
   margin-top: 11px;
@@ -1050,6 +1075,29 @@ ol {
 
 .winner-saving strong {
   font-weight: 600;
+}
+
+.focus-best-link {
+  padding: 0;
+  border: 0;
+  color: rgba(255, 255, 255, 0.64);
+  background: none;
+  font-size: 10px;
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.26);
+  text-underline-offset: 3px;
+}
+
+.focus-best-link:hover {
+  color: #fff;
+}
+
+.winner-verdict {
+  max-width: 410px;
+  margin-top: 20px;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 10.5px;
+  line-height: 1.65;
 }
 
 .winner-footer {
@@ -1253,6 +1301,10 @@ ol {
 }
 
 .rank-row.is-best .rank-delta {
+  color: var(--accent-ink);
+}
+
+.rank-row.is-tie .rank-delta {
   color: var(--accent-ink);
 }
 
