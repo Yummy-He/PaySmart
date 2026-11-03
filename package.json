@@ -1,0 +1,11 @@
+{
+  "name": "zeka-rate-aware-card-finder",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "比较外币消费走不同支付路径时的预计人民币入账成本。",
+  "scripts": {
+    "start": "node server.mjs",
+    "update-rates": "node scripts/fetch-rates.mjs"
+  }
+}

@@ -1,0 +1,138 @@
+/*
+ * 代表性卡片。这里只描述“支付路径”，不对应任何实时权益或办卡推荐。
+ * feePct = 货币转换费（%）；cashbackPct = 返现/积分折现（%）。
+ */
+window.FX_CARDS = [
+  {
+    id: "icbc-multi",
+    bank: "工商银行",
+    name: "奋斗万事达",
+    fullName: "工行 奋斗万事达",
+    rail: "multi",
+    railLabel: "多币种直付",
+    account: "多币种",
+    network: "mastercard",
+    networkLabel: "万事达",
+    rateSource: "icbc",
+    feePct: 0,
+    cashbackPct: 0,
+    art: "carbon",
+    type: "银行购汇 · 多币种直付",
+    tagline: "交易币种直接入账，按工行牌价购汇",
+    detail:
+      "支持多个外币账户。消费币种在账户列表内时，不经过卡组织二次转换，直接按工行现汇卖出价购汇还款；不在列表内时，先由卡组织折成美元。",
+    path: "外币消费 → 外币账户 → 工行现汇卖出价",
+    pros: "路径最短，少一次卡组织折算",
+    caveat: "仅覆盖已开立的外币账户币种",
+    supported: ["USD", "EUR", "GBP", "JPY", "HKD", "CAD", "AUD", "SGD", "CHF", "NZD"]
+  },
+  {
+    id: "boc-monet",
+    bank: "中国银行",
+    name: "莫奈万事达世界卡",
+    fullName: "中行 莫奈世界卡",
+    rail: "foreign-usd",
+    railLabel: "纯外币卡",
+    account: "USD",
+    network: "mastercard",
+    networkLabel: "万事达",
+    rateSource: "boc",
+    feePct: 0,
+    cashbackPct: 0,
+    art: "ivory",
+    type: "银行购汇 · 纯外币卡",
+    tagline: "没有人民币账户，先购汇再还款",
+    detail:
+      "以常见的美元账户为例。非美元消费先由万事达折算成美元，再按中行美元现汇卖出价购汇还款。没有人民币账户，就绕不开“先买美元”这一步。",
+    path: "外币消费 → 万事达折美元 → 中行美元卖出价",
+    pros: "外币账户清晰，适合有美元还款需求的人",
+    caveat: "非美元消费会经历两次转换",
+    supported: null
+  },
+  {
+    id: "boc-mc-cny",
+    bank: "中国银行",
+    name: "万事网联人民币卡",
+    fullName: "中行 万事网联人民币卡",
+    rail: "cny-card",
+    railLabel: "人民币入账",
+    account: "CNY",
+    network: "mastercard",
+    networkLabel: "万事达",
+    rateSource: null,
+    feePct: 0,
+    cashbackPct: 0,
+    art: "tomato",
+    type: "卡组织汇率 · 人民币入账",
+    tagline: "一次折算，直接生成人民币账单",
+    detail:
+      "人民币账户，消费由万事达直接折算成人民币入账，不经过银行购汇。路径里只有一次卡组织汇率，通常比“先折美元再购汇”更干净。",
+    path: "外币消费 → 万事达折人民币 → 人民币账单",
+    pros: "只有一次卡组织折算，无购汇环节",
+    caveat: "最终汇率由卡组织入账日决定",
+    supported: null
+  },
+  {
+    id: "boc-visa-usd",
+    bank: "中国银行",
+    name: "Visa 双币卡",
+    fullName: "中行 Visa 双币卡",
+    rail: "foreign-usd",
+    railLabel: "美元中转",
+    account: "USD",
+    network: "visa",
+    networkLabel: "Visa",
+    rateSource: "boc",
+    feePct: 1.5,
+    cashbackPct: 0,
+    art: "graphite",
+    type: "美元中转 · 双币卡",
+    tagline: "卡组织折美元，银行再购汇",
+    detail:
+      "典型的美元账户双币卡：没有人民币账户，非美元消费先由 Visa 折算成美元，再由银行按美元现汇卖出价购汇，并加收货币转换费。",
+    path: "外币消费 → Visa 折美元 → 银行美元卖出价",
+    pros: "美元消费时路径简单",
+    caveat: "1.5% 货转费 + 两次转换，通常最贵",
+    supported: null
+  },
+  {
+    id: "icbc-unionpay",
+    bank: "工商银行",
+    name: "银联双标卡",
+    fullName: "工行 银联双标卡",
+    rail: "cny-card",
+    railLabel: "银联通道",
+    account: "CNY",
+    network: "unionpay",
+    networkLabel: "银联",
+    rateSource: null,
+    feePct: 0,
+    cashbackPct: 0,
+    art: "sand",
+    type: "银联通道 · 人民币入账",
+    tagline: "走银联网络，直接人民币记账",
+    detail:
+      "双标卡走银联通道时，由银联把消费币种折算成人民币入账。没有银行购汇环节，也通常没有货币转换费。",
+    path: "外币消费 → 银联折人民币 → 人民币账单",
+    pros: "人民币入账，通常无货转费",
+    caveat: "能否走银联，取决于收单网络",
+    supported: null
+  }
+];
+
+window.FX_CURRENCIES = [
+  { code: "USD", name: "美元", symbol: "US$", decimals: 2 },
+  { code: "EUR", name: "欧元", symbol: "€", decimals: 2 },
+  { code: "GBP", name: "英镑", symbol: "£", decimals: 2 },
+  { code: "JPY", name: "日元", symbol: "JP¥", decimals: 0 },
+  { code: "HKD", name: "港币", symbol: "HK$", decimals: 2 },
+  { code: "SGD", name: "新加坡元", symbol: "S$", decimals: 2 },
+  { code: "AUD", name: "澳元", symbol: "A$", decimals: 2 },
+  { code: "CAD", name: "加元", symbol: "C$", decimals: 2 },
+  { code: "CHF", name: "瑞士法郎", symbol: "CHF", decimals: 2 },
+  { code: "KRW", name: "韩元", symbol: "₩", decimals: 0 },
+  { code: "THB", name: "泰铢", symbol: "฿", decimals: 2 },
+  { code: "MYR", name: "林吉特", symbol: "RM", decimals: 2 },
+  { code: "NZD", name: "新西兰元", symbol: "NZ$", decimals: 2 },
+  { code: "MOP", name: "澳门元", symbol: "MOP$", decimals: 2 }
+];

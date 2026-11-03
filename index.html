@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>择卡 — 这一刻，刷哪张卡？</title>
+    <meta
+      name="description"
+      content="输入一笔外币消费，比较银行购汇、卡组织人民币入账、美元中转和银联通道的预计人民币成本。"
+    />
+    <meta name="theme-color" content="#ffffff" />
+    <meta name="color-scheme" content="light" />
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css" />
+    <script defer src="assets/rates.js"></script>
+    <script defer src="assets/cards.js"></script>
+    <script defer src="assets/app.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#compare">跳到比较器</a>
+
+    <header class="site-header">
+      <div class="container nav-inner">
+        <a class="brand" href="#top" aria-label="择卡首页">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span>择卡</span>
+          <span class="brand-sub">RATE-AWARE</span>
+        </a>
+        <nav class="nav-links" aria-label="主导航">
+          <a href="#compare">比较</a>
+          <a href="#types">支付路径</a>
+          <a href="#method">算法</a>
+        </nav>
+        <div class="snapshot-pill" title="银行牌价快照时间">
+          <span class="snapshot-dot" aria-hidden="true"></span>
+          <span class="js-snapshot">牌价快照</span>
+        </div>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="container hero-grid">
+          <div class="hero-copy">
+            <p class="eyebrow">PAY SMART · 汇率决策器</p>
+            <h1>这一刻，<br /><span class="accent">刷哪张卡？</span></h1>
+            <p class="hero-lede">
+              同样一笔外币消费，走银行购汇、卡组织入账，还是美元中转，最终可能差出一顿饭。<span class="nowrap">先算清，再付款。</span>
+            </p>
+            <div class="hero-meta" aria-label="功能概览">
+              <span>5 种支付路径</span>
+              <span>14 个币种</span>
+              <span>牌价快照计算</span>
+              <span>无追踪</span>
+            </div>
+          </div>
+
+          <div class="hero-visual" aria-hidden="true">
+            <div class="card-stage">
+              <div class="credit-card card-a art-carbon">
+                <div class="cc-top">
+                  <span class="cc-bank">中国工商银行<small>Industrial and Commercial Bank of China</small></span>
+                  <span class="cc-network">mastercard</span>
+                </div>
+                <div class="cc-middle">
+                  <span class="cc-chip"></span>
+                  <svg class="cc-contactless" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                    <path d="M8.5 8.5a5 5 0 0 1 0 7" />
+                    <path d="M11.5 6a9 9 0 0 1 0 12" />
+                    <path d="M14.5 3.5a13 13 0 0 1 0 17" />
+                  </svg>
+                  <span class="cc-number">•••• 2048</span>
+                </div>
+                <div class="cc-bottom">
+                  <div>
+                    <div class="cc-name">奋斗万事达</div>
+                    <div class="cc-sub">Multi-currency · ICBC FX</div>
+                  </div>
+                  <div class="cc-fx"><strong>10</strong><span>currencies</span></div>
+                </div>
+              </div>
+
+              <div class="credit-card card-b art-ivory">
+                <div class="cc-top">
+                  <span class="cc-bank">中国银行<small>Bank of China</small></span>
+                  <span class="cc-network">mastercard</span>
+                </div>
+                <div class="cc-middle">
+                  <span class="cc-chip"></span>
+                  <svg class="cc-contactless" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                    <path d="M8.5 8.5a5 5 0 0 1 0 7" />
+                    <path d="M11.5 6a9 9 0 0 1 0 12" />
+                    <path d="M14.5 3.5a13 13 0 0 1 0 17" />
+                  </svg>
+                  <span class="cc-number">•••• 1987</span>
+                </div>
+                <div class="cc-bottom">
+                  <div>
+                    <div class="cc-name">莫奈世界卡</div>
+                    <div class="cc-sub">World Card · BOC FX</div>
+                  </div>
+                  <div class="cc-fx"><strong>USD</strong><span>settlement</span></div>
+                </div>
+              </div>
+
+              <div class="credit-card card-c art-tomato">
+                <div class="cc-top">
+                  <span class="cc-bank">中国银行<small>Bank of China</small></span>
+                  <span class="cc-network">mastercard</span>
+                </div>
+                <div class="cc-middle">
+                  <span class="cc-chip"></span>
+                  <svg class="cc-contactless" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                    <path d="M8.5 8.5a5 5 0 0 1 0 7" />
+                    <path d="M11.5 6a9 9 0 0 1 0 12" />
+                    <path d="M14.5 3.5a13 13 0 0 1 0 17" />
+                  </svg>
+                  <span class="cc-number">•••• 8866</span>
+                </div>
+                <div class="cc-bottom">
+                  <div>
+                    <div class="cc-name">万事网联人民币卡</div>
+                    <div class="cc-sub">CNY Settlement · One Conversion</div>
+                  </div>
+                  <div class="cc-fx"><strong>CNY</strong><span>settlement</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="compare" id="compare">
+        <div class="container">
+          <div class="section-head">
+            <div class="section-head-copy">
+              <span class="section-index">01 / COMPARE</span>
+              <h2>先告诉我这笔消费。</h2>
+            </div>
+            <p class="section-side">
+              输入金额和币种，下面立刻按五种支付路径计算预计人民币入账。所有换算都在本地完成。
+            </p>
+          </div>
+
+          <div class="calculator">
+            <div class="calc-main">
+              <div class="amount-label">
+                <span>消费金额</span>
+                <span class="amount-label-note">输入外币金额，支持小数</span>
+              </div>
+              <div class="amount-row">
+                <span class="amount-prefix" id="amountPrefix">US$</span>
+                <input
+                  id="amountInput"
+                  class="amount-input"
+                  type="text"
+                  inputmode="decimal"
+                  autocomplete="off"
+                  spellcheck="false"
+                  value="1000"
+                  aria-label="消费金额"
+                />
+              </div>
+              <div class="amount-presets" aria-label="金额快捷选择">
+                <button class="preset" type="button" data-amount="100">100</button>
+                <button class="preset" type="button" data-amount="500">500</button>
+                <button class="preset" type="button" data-amount="1000">1,000</button>
+                <button class="preset" type="button" data-amount="5000">5,000</button>
+              </div>
+
+              <p class="currency-label" id="currencyLabel">消费币种</p>
+              <div class="currency-chips" id="currencyChips" role="group" aria-labelledby="currencyLabel"></div>
+            </div>
+
+            <aside class="fact-panel" aria-label="当前汇率基线">
+              <p class="fact-panel-title">此刻的汇率基线</p>
+              <div id="factRows"></div>
+              <p class="fact-note" id="factNote">
+                牌价来自银行官网快照；卡组织汇率按中间价加点估算，可在下方“汇率与费用假设”中调整。
+              </p>
+            </aside>
+          </div>
+
+          <div class="results-grid" id="results">
+            <article class="winner" id="winnerCard" aria-label="当前最优选择">
+              <div class="winner-content" id="winnerContent"></div>
+            </article>
+
+            <section class="ranking" aria-labelledby="rankingTitle">
+              <div class="ranking-head">
+                <h3 id="rankingTitle">全部支付路径</h3>
+                <span>按预计入账从低到高</span>
+              </div>
+              <div class="ranking-list" id="rankingList"></div>
+              <div class="ranking-foot">
+                <span>已计入货转费与返现设置</span>
+                <button type="button" id="openAssumptions">调整假设</button>
+              </div>
+            </section>
+          </div>
+
+          <section class="route-card" id="routeCard" aria-labelledby="routeTitle">
+            <div class="route-head">
+              <div>
+                <p class="route-kicker">这笔钱怎么走</p>
+                <h3 id="routeTitle">—</h3>
+              </div>
+              <span class="route-tag" id="routeTag">—</span>
+            </div>
+            <div class="route-grid">
+              <div>
+                <p class="route-subhead">支付路径</p>
+                <ol class="timeline" id="routeSteps"></ol>
+                <div class="route-verdict" id="routeVerdict"></div>
+              </div>
+              <div>
+                <p class="route-subhead">成本拆解</p>
+                <div class="cost-list" id="costList"></div>
+                <p class="cost-note">
+                  卡组织汇率无法静态公开抓取，本页按“中间价 + 可调加点”模拟；银行购汇使用官网现汇卖出价。最终以发卡行入账为准。
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <details class="assumptions" id="assumptions">
+            <summary>
+              <span class="assumptions-title">
+                汇率与费用假设
+                <span>卡组织加点、货转费、返现均可调整</span>
+              </span>
+              <span class="assumptions-chevron" aria-hidden="true">
+                <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                  <path d="M6 1v10M1 6h10" />
+                </svg>
+              </span>
+            </summary>
+            <div class="assumptions-body">
+              <div class="assumption-grid">
+                <div>
+                  <p class="assumption-col-title">卡组织汇率加点</p>
+                  <div id="networkControls"></div>
+                </div>
+                <div>
+                  <p class="assumption-col-title">卡片费率与返现</p>
+                  <div class="param-list" id="cardParams"></div>
+                </div>
+              </div>
+
+              <div class="rate-table-wrap">
+                <p class="assumption-col-title" id="rateTableTitle">当前币种牌价</p>
+                <table class="rate-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">汇率口径</th>
+                      <th scope="col">1 单位外币 =</th>
+                      <th scope="col">相对中间价</th>
+                    </tr>
+                  </thead>
+                  <tbody id="rateTableBody"></tbody>
+                </table>
+              </div>
+
+              <div class="assumptions-foot">
+                <p>
+                  默认值只是用于比较的透明假设，不代表任何银行或卡组织的公开报价。若你的卡有年费、返现上限、积分折现或动态货币转换（DCC），请按实际条款微调。
+                </p>
+                <button class="text-button" type="button" id="resetBtn">恢复默认</button>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <section class="types" id="types">
+        <div class="container">
+          <div class="section-head">
+            <div class="section-head-copy">
+              <span class="section-index">02 / PAYMENT RAILS</span>
+              <h2>五种路径，<br />五种账单。</h2>
+            </div>
+            <p class="section-side">
+              不用记住每张卡。先认出它走哪条路径，汇率和费用就大致有数了。下面每类只放一张代表卡。
+            </p>
+          </div>
+
+          <div class="types-grid">
+            <article class="type-card">
+              <div class="type-top">
+                <span class="type-index">01</span>
+                <span class="type-icon">FX</span>
+              </div>
+              <h3>银行购汇<br />多币种直付</h3>
+              <p class="type-route">外币消费 → 外币账户 → 银行现汇卖出价</p>
+              <p class="type-copy">
+                交易币种能直接进入卡内外币账户，不经过卡组织二次折算。路径最短，代价是银行牌价本身的买卖点差。
+              </p>
+              <div class="type-bottom">
+                <span class="type-card-tag">工行 奋斗万事达</span>
+                <span class="type-note">币种不在账户列表内时，会先折美元。</span>
+              </div>
+            </article>
+
+            <article class="type-card">
+              <div class="type-top">
+                <span class="type-index">02</span>
+                <span class="type-icon">USD</span>
+              </div>
+              <h3>银行购汇<br />纯外币卡</h3>
+              <p class="type-route">外币消费 → 卡组织折美元 → 银行美元卖出价</p>
+              <p class="type-copy">
+                没有人民币账户，就绕不开购汇。以美元账户为例，非美元消费会先被卡组织折成美元，再按银行美元牌价买入。
+              </p>
+              <div class="type-bottom">
+                <span class="type-card-tag">中行 莫奈万事达世界卡</span>
+                <span class="type-note">两次转换，取决于美元账户结构。</span>
+              </div>
+            </article>
+
+            <article class="type-card">
+              <div class="type-top">
+                <span class="type-index">03</span>
+                <span class="type-icon">CNY</span>
+              </div>
+              <h3>卡组织汇率<br />人民币入账</h3>
+              <p class="type-route">外币消费 → 卡组织折人民币 → 人民币账单</p>
+              <p class="type-copy">
+                人民币账户直接收单，只经过一次卡组织折算，没有银行购汇环节。路径干净，最终汇率由入账日决定。
+              </p>
+              <div class="type-bottom">
+                <span class="type-card-tag">中行 万事网联人民币卡</span>
+                <span class="type-note">通常没有货币转换费。</span>
+              </div>
+            </article>
+
+            <article class="type-card">
+              <div class="type-top">
+                <span class="type-index">04</span>
+                <span class="type-icon">V</span>
+              </div>
+              <h3>美元中转<br />双币 Visa</h3>
+              <p class="type-route">外币消费 → Visa 折美元 → 银行美元卖出价</p>
+              <p class="type-copy">
+                典型的美元账户双币卡：卡组织先折美元，银行再购汇。若再叠加 1.5% 货币转换费，通常是五条路径里最贵的。
+              </p>
+              <div class="type-bottom">
+                <span class="type-card-tag">中行 Visa 双币卡</span>
+                <span class="type-note">美元消费时，才会少一次转换。</span>
+              </div>
+            </article>
+
+            <article class="type-card type-card--wide">
+              <div class="type-content">
+                <div>
+                  <div class="type-top">
+                    <span class="type-index">05</span>
+                    <span class="type-icon">UP</span>
+                  </div>
+                  <h3>银联通道 · 人民币入账</h3>
+                  <p class="type-route">外币消费 → 银联折人民币 → 人民币账单</p>
+                </div>
+                <div>
+                  <p class="type-copy">
+                    双标卡走银联网络时，由银联直接折算人民币入账，没有银行购汇环节，通常也没有货币转换费。能否走银联，取决于收单网络；少数套卡若按外币账户入账后再转人民币，成本会更接近“多币种直付”。
+                  </p>
+                  <div class="type-bottom">
+                    <span class="type-card-tag">工行 银联双标卡</span>
+                    <span class="type-note">和卡组织人民币卡往往只差几个基点。</span>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <p class="types-disclaimer">
+            代表卡只用于说明支付路径，不构成办卡或产品推荐。卡组织、币种账户、货转费、返现规则均可能随产品与时间变化，请以发卡行最新条款为准。
+          </p>
+        </div>
+      </section>
+
+      <section class="method" id="method">
+        <div class="container">
+          <div class="section-head">
+            <div class="section-head-copy">
+              <span class="section-index">03 / METHOD</span>
+              <h2>省下的，<br />是汇率里的细节。</h2>
+            </div>
+            <p class="section-side">
+              这里没有玄学。把一笔消费拆成“卡组织折算”和“银行购汇”两步，再把费用和返现放进去，结果就清楚了。
+            </p>
+          </div>
+
+          <div class="method-grid">
+            <div class="method-item">
+              <span class="method-num">01</span>
+              <h3>银行牌价，看卖出价</h3>
+              <p>
+                你用人民币买外币还款，对应的是银行“现汇卖出价”，不是中间价，也不是现钞买入价。买入价和卖出价之间的差额，就是银行点差。
+              </p>
+            </div>
+            <div class="method-item">
+              <span class="method-num">02</span>
+              <h3>卡组织汇率，按加点模拟</h3>
+              <p>
+                Visa、万事达、银联的入账汇率不对外提供稳定的静态接口。本页用“中间价 + 可调基点”模拟，默认万事达 25bp、Visa 35bp、银联 30bp。
+              </p>
+            </div>
+            <div class="method-item">
+              <span class="method-num">03</span>
+              <h3>费用和返现，一起算</h3>
+              <p>
+                货币转换费按折算后金额加收；返现和积分折现按比例抵扣。你可以在“汇率与费用假设”里把每张卡改成自己的真实费率。
+              </p>
+            </div>
+          </div>
+
+          <div class="formula" aria-label="计算公式">
+            <b>预计入账</b>
+            <span class="op">=</span>
+            <span>外币金额 × 卡组织折算率 × 银行购汇率 × (1 + 货转费)</span>
+            <span class="op">−</span>
+            <span>返现 / 积分折现</span>
+          </div>
+
+          <div class="method-foot">
+            <p>
+              本页是消费前的决策辅助，不是结算报价。银行牌价取自中国银行、中国工商银行官网快照；中间价来自 ExchangeRate-API；卡组织汇率与卡片费率为可调假设。实际入账金额、汇率时点、返现资格均以发卡行和卡组织为准。若收单方提供动态货币转换（DCC），通常应拒绝人民币定价，选择当地币种结算。
+            </p>
+            <div class="source-links">
+              <a href="https://www.boc.cn/sourcedb/whpj/" target="_blank" rel="noopener noreferrer">中国银行牌价</a>
+              <a href="https://www.icbc.com.cn/column/1438058341489590354.html" target="_blank" rel="noopener noreferrer">工商银行牌价</a>
+              <a href="https://www.exchangerate-api.com/" target="_blank" rel="noopener noreferrer">中间价</a>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="footer-top">
+          <div class="footer-brand">
+            <span class="brand-mark" aria-hidden="true"></span>
+            <div>
+              <strong>择卡</strong>
+              <span>RATE-AWARE CARD FINDER</span>
+            </div>
+          </div>
+          <p class="footer-note">
+            为“付款前的那一秒”而做。所有计算在浏览器本地完成，不上传金额、币种或卡片设置，也没有第三方脚本。
+          </p>
+        </div>
+        <div class="footer-bottom">
+          <span><span class="js-snapshot">—</span> <span class="dot"></span>仅供比较，不构成财务建议</span>
+          <span>Made for the moment before you tap.</span>
+        </div>
+      </div>
+    </footer>
+
+    <div class="sr-only" id="liveRegion" aria-live="polite"></div>
+
+    <noscript>
+      <div style="position: fixed; right: 16px; bottom: 16px; left: 16px; z-index: 200; padding: 16px; border-radius: 12px; background: #1d1d1f; color: #fff; font: 14px/1.5 -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif; text-align: center;">
+        比较器需要 JavaScript 才能计算。请启用 JavaScript 后刷新页面。
+      </div>
+    </noscript>
+  </body>
+</html>
