@@ -101,8 +101,8 @@ window.FX_CARDS = [
   {
     id: "cmb-mc-cny",
     bank: "招商银行",
-    name: "万事达人民币卡",
-    fullName: "招行 万事达人民币卡",
+    name: "万事达标准信用卡",
+    fullName: "招行 万事达标准信用卡",
     rail: "cny-card",
     railLabel: "人民币入账",
     account: "CNY",
@@ -115,7 +115,7 @@ window.FX_CARDS = [
     type: "卡组织汇率 · 人民币入账",
     tagline: "人民币账户，万事达直接折算入账",
     detail:
-      "人民币账户，跨境消费由万事达直接折人民币入账，不经过银行购汇。部分招行万事达卡已切换人民币结算，具体以卡面和银行公告为准。",
+      "人民币账户，跨境消费由万事达直接折人民币入账，不经过银行购汇。招行万事达标准信用卡等指定产品已切换人民币结算，具体以卡面和银行公告为准。",
     path: "外币消费 → 万事达折人民币 → 人民币账单",
     pros: "一次折算，无购汇环节",
     caveat: "最终汇率由卡组织入账日决定",
@@ -189,6 +189,78 @@ window.FX_CARDS = [
     pros: "人民币入账，路径直接",
     caveat: "能否走银联，取决于收单网络",
     supported: null
+  },
+  {
+    id: "icbc-zodiac",
+    bank: "工商银行",
+    name: "宇宙星座信用卡",
+    fullName: "工行 宇宙星座卡",
+    rail: "multi",
+    railLabel: "多币种直付",
+    account: "多币种",
+    network: "visa",
+    networkLabel: "Visa",
+    rateSource: "icbc",
+    feePct: 0,
+    cashbackPct: 0,
+    art: "forest",
+    type: "工行购汇 · 多币种直付",
+    tagline: "Visa 单标识多币种，10 个外币账户",
+    detail:
+      "宇宙星座卡采用“1+1”配发：境内银联人民币卡，境外 Visa 单标识多币种卡。10 个外币账户内直接以对应币种入账，未覆盖币种再经美元。",
+    path: "外币消费 → 工行外币账户 → 工行现汇卖出价",
+    pros: "Visa 多币种账户，10 个常见币种直接入账",
+    caveat: "境内银联卡与境外 Visa 卡分开配发",
+    directTag: "外币直入",
+    supported: ["USD", "EUR", "GBP", "JPY", "HKD", "SGD", "AUD", "CAD", "CHF", "NZD"]
+  },
+  {
+    id: "boc-greatwall",
+    bank: "中国银行",
+    name: "长城国际卡",
+    fullName: "中行 长城国际卡",
+    rail: "multi",
+    railLabel: "纯外币多币种",
+    account: "多币种",
+    network: "visa",
+    networkLabel: "Visa",
+    rateSource: "boc",
+    funding: "rmb-card",
+    feePct: 0,
+    cashbackPct: 0,
+    art: "ivory",
+    type: "中行购汇 · 纯外币多币种",
+    tagline: "港币 / 美元 / 欧元 / 英镑 / 澳元账户",
+    detail:
+      "长城国际卡提供港币、美元、欧元、英镑、澳元等外币账户，可用人民币购汇或外汇户口还款。币种匹配时直接入账，未覆盖币种再经美元。",
+    path: "外币消费 → 中行外币账户 → 中行人民币卡购汇转入",
+    pros: "多币种账户，可避开一次卡组织折算",
+    caveat: "没有人民币账户，还款需购汇或外汇户口",
+    directTag: "购汇转入",
+    supported: ["USD", "EUR", "GBP", "HKD", "AUD"]
+  },
+  {
+    id: "bocom-mastercard",
+    bank: "交通银行",
+    name: "太平洋双币卡（万事达）",
+    fullName: "交行 太平洋双币卡 Mastercard",
+    rail: "foreign-usd",
+    railLabel: "美元中转",
+    account: "USD",
+    network: "mastercard",
+    networkLabel: "万事达",
+    rateSource: "bocom",
+    feePct: 0,
+    cashbackPct: 0,
+    art: "blue",
+    type: "交行购汇 · 双币卡",
+    tagline: "美元账户双币卡，按交行美元牌价购汇",
+    detail:
+      "太平洋双币卡的万事达版本，美元账户。非美元消费由万事达折美元，再按交行美元现汇卖出价购汇；是否收货币转换费以你的卡为准。",
+    path: "外币消费 → 万事达折美元 → 交行美元卖出价",
+    pros: "美元账户路径简单",
+    caveat: "两次转换；货转费默认 0，需按实际卡设置",
+    supported: null
   }
 ];
 
@@ -201,8 +273,8 @@ window.FX_PATHS = [
     mark: "FX",
     art: "carbon",
     primaryCardId: "icbc-multi",
-    representativeCardIds: ["icbc-multi"],
-    representativeLabel: "工行 奋斗万事达",
+    representativeCardIds: ["icbc-multi", "icbc-zodiac"],
+    representativeLabel: "工行 奋斗万事达 / 宇宙星座",
     titleHtml: "工行购汇<br />多币种直付",
     typeRoute: "外币消费 → 工行外币账户 → 工行现汇卖出价",
     typeCopy:
@@ -217,13 +289,13 @@ window.FX_PATHS = [
     mark: "FX",
     art: "ivory",
     primaryCardId: "boc-monet",
-    representativeCardIds: ["boc-monet"],
-    representativeLabel: "中行 莫奈世界卡",
+    representativeCardIds: ["boc-monet", "boc-greatwall"],
+    representativeLabel: "中行 莫奈世界卡 / 长城国际卡",
     titleHtml: "中行购汇<br />纯外币多币种",
     typeRoute: "外币消费 → 中行外币账户 → 中行人民币卡购汇转入",
     typeCopy:
-      "没有人民币账户，但支持多个外币币种。消费直接进入对应外币账户；还款时先用另一张中行人民币卡购汇，再转入外币账户。",
-    typeNote: "没有人民币账户，需另一张中行卡购汇。"
+      "没有人民币账户，但支持多个外币币种。消费直接进入对应外币账户；还款时先用另一张中行人民币卡购汇，再转入外币账户。莫奈覆盖 10 个币种，长城覆盖港币 / 美元 / 欧元 / 英镑 / 澳元。",
+    typeNote: "页面按莫奈的 10 个币种覆盖计算。"
   },
   {
     id: "network-cny",
@@ -234,7 +306,7 @@ window.FX_PATHS = [
     art: "tomato",
     primaryCardId: "boc-mc-cny",
     representativeCardIds: ["boc-mc-cny", "cmb-mc-cny"],
-    representativeLabel: "中行万事网联 / 招行万事达",
+    representativeLabel: "中行万事网联 / 招行万事达标准",
     titleHtml: "万事达<br />人民币入账",
     typeRoute: "外币消费 → 万事达折人民币 → 人民币账单",
     typeCopy:
@@ -244,33 +316,33 @@ window.FX_PATHS = [
   {
     id: "usd-full",
     index: "04",
-    name: "招行购汇 · 全币种 Visa",
+    name: "招行购汇 · 全币种卡",
     shortName: "招行全币种购汇",
-    mark: "V",
+    mark: "USD",
     art: "graphite",
     primaryCardId: "cmb-visa",
     representativeCardIds: ["cmb-visa"],
     representativeLabel: "招行 全币种 Visa",
-    titleHtml: "招行购汇<br />全币种 Visa",
-    typeRoute: "外币消费 → Visa 折美元 → 招行美元卖出价",
+    titleHtml: "招行购汇<br />全币种卡",
+    typeRoute: "外币消费 → 卡组织折美元 → 招行美元卖出价",
     typeCopy:
-      "全币种 Visa 仍是美元账户：卡组织先折美元，银行再按招行美元卖出价购汇。是否免货转以你的卡为准。",
+      "招行全币种卡通常以美元为账户币种：卡组织先折美元，银行再按招行美元卖出价购汇。是否免货转以你的卡为准。",
     typeNote: "美元账户，两次转换；费率默认 0。"
   },
   {
     id: "usd-dual",
     index: "05",
-    name: "交行购汇 · 双币 Visa",
+    name: "交行购汇 · 双币卡",
     shortName: "交行双币购汇",
-    mark: "V",
+    mark: "USD",
     art: "forest",
     primaryCardId: "bocom-visa",
-    representativeCardIds: ["bocom-visa"],
-    representativeLabel: "交行 Visa 双币卡",
-    titleHtml: "交行购汇<br />双币 Visa",
-    typeRoute: "外币消费 → Visa 折美元 → 交行美元卖出价",
+    representativeCardIds: ["bocom-visa", "bocom-mastercard"],
+    representativeLabel: "交行 太平洋双币卡（Visa / Mastercard）",
+    titleHtml: "交行购汇<br />双币卡",
+    typeRoute: "外币消费 → 卡组织折美元 → 交行美元卖出价",
     typeCopy:
-      "典型美元账户双币卡：卡组织先折美元，银行再购汇。是否收货币转换费、费率多少，以你的卡为准。",
+      "太平洋双币卡通常为美元账户，Visa 和万事达两个版本都有。非美元消费先折美元，再按交行美元卖出价购汇。是否收货币转换费以卡为准。",
     typeNote: "美元账户，两次转换；费率默认 0。"
   },
   {
@@ -307,3 +379,5 @@ window.FX_CURRENCIES = [
   { code: "NZD", name: "新西兰元", symbol: "NZ$", decimals: 2 },
   { code: "MOP", name: "澳门元", symbol: "MOP$", decimals: 2 }
 ];
+
+
