@@ -7,6 +7,7 @@
  *   - 工商银行人民币即期外汇牌价（JSON API）
  *   - 招商银行外汇实时汇率（JSON API）
  *   - 交通银行外汇牌价（HTML）
+ *   - 快易理财网 Visa / 万事达 / 银联卡组织汇率（HTML）
  *   - ExchangeRate-API 中间价（JSON）
  *
  * 生成 assets/rates.js。银行牌价统一换算为“人民币 / 1 外币”。
@@ -23,6 +24,7 @@ const ICBC_URL = "https://papi.icbc.com.cn/exchanges/ns/getLatest";
 const CMB_URL = "https://fx.cmbchina.com/api/v1/fx/rate";
 const BOCOM_URL =
   "https://www.bankcomm.com/BankCommSite/shtml/jyjr/cn/7158/list.shtml?channelId=7158&anchor=goSCYJ";
+const KYLC_BASE = "https://www.kylc.com";
 const MID_URL = "https://open.er-api.com/v6/latest/CNY";
 
 const CURRENCIES = {
@@ -80,6 +82,22 @@ function getText(url, options = {}) {
           data += chunk;
         });
         response.on("end", () => {
+          const location = response.headers.location;
+          if (
+            [301, 302, 303, 307, 308].includes(response.statusCode) &&
+            location &&
+            (options.redirectCount || 0) < 4
+          ) {
+            response.resume();
+            resolve(
+              getText(new URL(location, url).toString(), {
+                ...options,
+                redirectCount: (options.redirectCount || 0) + 1
+              })
+            );
+            return;
+          }
+
           if (response.statusCode >= 200 && response.statusCode < 300) {
             resolve(data);
           } else {
@@ -194,6 +212,77 @@ function parseBocom(html) {
   return result;
 }
 
+function stripHtml(html) {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ");
+}
+
+function parseKylcRate(html) {
+  const text = stripHtml(html);
+  const rateMatch = text.match(/汇率:\s*([0-9]+(?:\.[0-9]+)?)/);
+  const fullDateMatch = text.match(/发布时间:\s*(\d{4})年(\d{1,2})月(\d{1,2})日/);
+  const shortDateMatch = text.match(/\((\d{1,2})月(\d{1,2})日\)/);
+  if (!rateMatch || (!fullDateMatch && !shortDateMatch)) return null;
+
+  const rate = Number.parseFloat(rateMatch[1]);
+  if (!Number.isFinite(rate)) return null;
+
+  const snapshotYear = text.match(/本页快照时间:\s*(\d{4})/)?.[1];
+  const year = fullDateMatch?.[1] || snapshotYear || String(new Date().getFullYear());
+  const month = fullDateMatch?.[2] || shortDateMatch?.[1];
+  const day = fullDateMatch?.[3] || shortDateMatch?.[2];
+  if (!month || !day) return null;
+
+  return {
+    rate,
+    date: `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+  };
+}
+
+async function fetchKylcPair(brand, account, code) {
+  const url =
+    brand === "unionpay"
+      ? `${KYLC_BASE}/uprate/${code.toLowerCase()}.html`
+      : `${KYLC_BASE}/huilv/i-${brand}/${account}/${code.toLowerCase()}.html`;
+
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    try {
+      const parsed = parseKylcRate(await getText(url));
+      if (parsed) return { ...parsed, url };
+    } catch (error) {
+      if (attempt === 2) {
+        console.warn(`Kylc rate unavailable: ${brand}/${account}/${code} (${error.message})`);
+      }
+    }
+    await new Promise((resolvePromise) => setTimeout(resolvePromise, 250 * attempt));
+  }
+  return null;
+}
+
+async function mapLimit(items, limit, task) {
+  const results = new Array(items.length);
+  let cursor = 0;
+
+  async function worker() {
+    while (cursor < items.length) {
+      const index = cursor;
+      cursor += 1;
+      results[index] = await task(items[index], index);
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
+}
+
+function latestDate(dates) {
+  return dates.filter(Boolean).sort().at(-1) || "";
+}
+
 function asOfLabel(date) {
   const parts = new Intl.DateTimeFormat("zh-CN", {
     timeZone: "Asia/Shanghai",
@@ -261,6 +350,53 @@ async function main() {
     mid[code] = Number((1 / midPayload.rates[code]).toFixed(8));
   }
 
+  console.log("Fetching Visa / Mastercard / UnionPay card-network rates...");
+  const currencyCodes = Object.keys(CURRENCIES);
+  const pairTasks = [];
+  for (const brand of ["visa", "mastercard"]) {
+    for (const code of currencyCodes) {
+      pairTasks.push({ brand, account: "cny", code });
+    }
+    for (const code of currencyCodes.filter((item) => item !== "USD")) {
+      pairTasks.push({ brand, account: "usd", code });
+    }
+  }
+  for (const code of currencyCodes) {
+    pairTasks.push({ brand: "unionpay", account: "cny", code });
+  }
+
+  const networkResults = await mapLimit(pairTasks, 4, (task) =>
+    fetchKylcPair(task.brand, task.account, task.code).then((result) => ({
+      ...task,
+      ...(result || {})
+    }))
+  );
+  const missingNetworkRates = networkResults.filter((item) => !Number.isFinite(item.rate));
+  if (missingNetworkRates.length) {
+    throw new Error(
+      `Kylc missing ${missingNetworkRates.length} card-network rates: ${missingNetworkRates
+        .map((item) => `${item.brand}/${item.account}/${item.code}`)
+        .join(", ")}`
+    );
+  }
+
+  const networkData = {
+    visa: { label: "Visa", cny: {}, usd: {}, dates: [] },
+    mastercard: { label: "万事达", cny: {}, usd: {}, dates: [] },
+    unionpay: { label: "银联", cny: {}, dates: [] }
+  };
+  for (const item of networkResults) {
+    networkData[item.brand][item.account][item.code] = item.rate;
+    networkData[item.brand].dates.push(item.date);
+  }
+  for (const key of ["visa", "mastercard", "unionpay"]) {
+    networkData[key].updated = latestDate(networkData[key].dates);
+    delete networkData[key].dates;
+  }
+  networkData.visa.sourceUrl = `${KYLC_BASE}/huilv/i-visa/cny/usd.html`;
+  networkData.mastercard.sourceUrl = `${KYLC_BASE}/huilv/i-mastercard/cny/usd.html`;
+  networkData.unionpay.sourceUrl = `${KYLC_BASE}/upcurrency.html`;
+
   const compactRates = (rates) =>
     Object.fromEntries(
       Object.entries(rates).map(([code, value]) => [
@@ -283,6 +419,10 @@ async function main() {
       {
         name: "交通银行外汇牌价",
         url: "https://www.bankcomm.com/BankCommSite/shtml/jyjr/cn/7158/list.shtml?channelId=7158"
+      },
+      {
+        name: "快易理财网卡组织汇率",
+        url: "https://www.kylc.com/upcurrency.html"
       },
       { name: "ExchangeRate-API 中间价", url: "https://www.exchangerate-api.com/" }
     ],
@@ -313,12 +453,7 @@ async function main() {
         rates: compactRates(bocom)
       }
     },
-    // 没有可靠的公开卡组织点数数据，默认按中间价（0bp），由用户按账单调整。
-    networkBps: {
-      mastercard: 0,
-      visa: 0,
-      unionpay: 0
-    }
+    networks: networkData
   };
 
   const target = resolve(ROOT, "assets/rates.js");
@@ -338,6 +473,11 @@ async function main() {
   console.log(`ICBC USD sell: ${data.banks.icbc.rates.USD.sell}`);
   console.log(`CMB USD sell: ${data.banks.cmb.rates.USD?.sell ?? "n/a"}`);
   console.log(`BOCOM USD sell: ${data.banks.bocom.rates.USD?.sell ?? "n/a"}`);
+  console.log(`Visa CNY/USD: ${data.networks.visa.cny.USD} (${data.networks.visa.updated})`);
+  console.log(
+    `Mastercard CNY/USD: ${data.networks.mastercard.cny.USD} (${data.networks.mastercard.updated})`
+  );
+  console.log(`UnionPay CNY/USD: ${data.networks.unionpay.cny.USD} (${data.networks.unionpay.updated})`);
   console.log(`Snapshot: ${data.asOfLabel}`);
 }
 

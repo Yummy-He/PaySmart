@@ -1617,8 +1617,8 @@ ol {
 
 .assumption-grid {
   display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-  gap: 44px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
   padding-top: 25px;
 }
 
@@ -2051,6 +2051,11 @@ input[type="range"] {
 .data-status--assumption {
   color: var(--accent-ink);
   background: var(--accent-soft);
+}
+
+.data-status--query {
+  color: #2b5f7a;
+  background: #eaf3f7;
 }
 
 .data-num {

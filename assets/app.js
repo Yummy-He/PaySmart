@@ -8,12 +8,7 @@
   const CURRENCY_MAP = Object.fromEntries(CURRENCIES.map((c) => [c.code, c]));
   const CARD_MAP = Object.fromEntries(CARDS.map((c) => [c.id, c]));
   const PATH_MAP = Object.fromEntries(PATHS.map((p) => [p.id, p]));
-  const STORAGE_KEY = "zeka-state-v4";
-  const NETWORK_LABELS = {
-    mastercard: { name: "万事达", en: "Mastercard" },
-    visa: { name: "Visa", en: "Visa" },
-    unionpay: { name: "银联", en: "UnionPay" }
-  };
+  const STORAGE_KEY = "zeka-state-v5";
   const BANK_ORDER = ["boc", "icbc", "cmb", "bocom"];
 
   const DEFAULT_STATE = (() => {
@@ -28,7 +23,6 @@
     return {
       amount: 1000,
       currency: "USD",
-      networkBps: { ...RATES.networkBps },
       paths: pathState
     };
   })();
@@ -57,7 +51,6 @@
     routeSteps: $("#routeSteps"),
     routeVerdict: $("#routeVerdict"),
     costList: $("#costList"),
-    networkControls: $("#networkControls"),
     pathParams: $("#pathParams"),
     pathTypes: $("#pathTypes"),
     rateTableTitle: $("#rateTableTitle"),
@@ -95,12 +88,6 @@
     next.amount = clamp(saved.amount, 0, 1000000000, next.amount);
     if (saved.currency && CURRENCY_MAP[saved.currency]) {
       next.currency = saved.currency;
-    }
-
-    if (saved.networkBps && typeof saved.networkBps === "object") {
-      Object.keys(next.networkBps).forEach((key) => {
-        next.networkBps[key] = clamp(saved.networkBps[key], 0, 100, next.networkBps[key]);
-      });
     }
 
     if (saved.paths && typeof saved.paths === "object") {
@@ -205,8 +192,19 @@
      Calculation
      --------------------------------------------------------- */
 
-  function networkBps(card) {
-    return clamp(state.networkBps[card.network], 0, 100, 0);
+  function networkCny(networkKey, code) {
+    const value = RATES.networks?.[networkKey]?.cny?.[code];
+    return Number.isFinite(value) ? value : RATES.mid[code];
+  }
+
+  function networkUsd(networkKey, code) {
+    if (code === "USD") return 1;
+    const value = RATES.networks?.[networkKey]?.usd?.[code];
+    return Number.isFinite(value) ? value : RATES.mid[code] / RATES.mid.USD;
+  }
+
+  function networkDate(networkKey) {
+    return RATES.networks?.[networkKey]?.updated || "";
   }
 
   function pathFees(path) {
@@ -233,8 +231,6 @@
     const amount = Math.max(0, Number(state.amount) || 0);
     const code = state.currency;
     const mid = RATES.mid[code];
-    const usdMid = RATES.mid.USD;
-    const spread = networkBps(card) / 10000;
     const bank = RATES.banks[card.rateSource] || RATES.banks.boc;
     const networkName = card.networkLabel;
 
@@ -288,7 +284,7 @@
     } else if (card.rail === "multi") {
       missingMultiCurrency = true;
       usedUsd = true;
-      const usdPerUnit = code === "USD" ? 1 : (mid / usdMid) * (1 + spread);
+      const usdPerUnit = networkUsd(card.network, code);
       const usdAmount = amount * usdPerUnit;
       const usdSell = bankRate(card, "USD", "sell");
       base = usdAmount * usdSell;
@@ -308,9 +304,9 @@
             }
           : {
               title: `${networkName} 把 ${foreign(amount, code)} 折成美元`,
-              body: `该币种不在多币种账户内。估算 1 ${code} ≈ ${usdPerUnit.toFixed(
+              body: `该币种不在多币种账户内。按 ${networkName} 卡组织汇率：1 ${code} ≈ ${usdPerUnit.toFixed(
                 rateDecimals(usdPerUnit)
-              )} USD（中间价 + ${networkBps(card)}bp）。`
+              )} USD（${networkDate(card.network)}）。`
             },
         {
           title: `按${bank.short}美元现汇卖出价购汇`,
@@ -328,7 +324,7 @@
         { label: "折算后金额", value: cny(base) }
       ];
     } else if (card.rail === "cny-card") {
-      const cnyPerUnit = mid * (1 + spread);
+      const cnyPerUnit = networkCny(card.network, code);
       base = amount * cnyPerUnit;
       accountAmount = base;
       effectiveNetworkRate = cnyPerUnit;
@@ -337,7 +333,10 @@
       steps = [
         {
           title: `${networkName} 把 ${foreign(amount, code)} 折成人民币`,
-          body: `估算 1 ${code} ≈ ${rate(cnyPerUnit, code)}（中间价 + ${networkBps(card)}bp）。`
+          body: `按 ${networkName} 卡组织汇率：1 ${code} ≈ ${rate(
+            cnyPerUnit,
+            code
+          )}（${networkDate(card.network)}）。`
         },
         {
           title: "人民币直接入账",
@@ -350,7 +349,7 @@
       ];
     } else {
       usedUsd = true;
-      const usdPerUnit = code === "USD" ? 1 : (mid / usdMid) * (1 + spread);
+      const usdPerUnit = networkUsd(card.network, code);
       const usdAmount = amount * usdPerUnit;
       const usdSell = bankRate(card, "USD", "sell");
       base = usdAmount * usdSell;
@@ -370,9 +369,9 @@
             }
           : {
               title: `${networkName} 把 ${foreign(amount, code)} 折成美元`,
-              body: `估算 1 ${code} ≈ ${usdPerUnit.toFixed(
+              body: `按 ${networkName} 卡组织汇率：1 ${code} ≈ ${usdPerUnit.toFixed(
                 rateDecimals(usdPerUnit)
-              )} USD（中间价 + ${networkBps(card)}bp）。`
+              )} USD（${networkDate(card.network)}）。`
             },
         {
           title: `按${bank.short}美元现汇卖出价购汇`,
@@ -496,32 +495,6 @@
     });
   }
 
-  function renderNetworkControls() {
-    dom.networkControls.innerHTML = Object.keys(NETWORK_LABELS)
-      .map((key) => {
-        const label = NETWORK_LABELS[key];
-        const value = state.networkBps[key];
-        return `
-          <div class="slider-row">
-            <span class="slider-row-label">
-              <strong>${label.name}</strong>
-              <small>${label.en}</small>
-            </span>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              step="1"
-              value="${value}"
-              data-network="${key}"
-              aria-label="${label.name}汇率加点（基点）"
-            />
-            <output>${value} bp</output>
-          </div>`;
-      })
-      .join("");
-  }
-
   function renderPathParams() {
     dom.pathParams.innerHTML = PATHS.map((path) => {
       const saved = state.paths[path.id];
@@ -581,13 +554,6 @@
   }
 
   function syncAssumptionControls() {
-    $$("[data-network]", dom.networkControls).forEach((input) => {
-      const key = input.dataset.network;
-      input.value = state.networkBps[key];
-      const output = input.parentElement.querySelector("output");
-      if (output) output.textContent = `${state.networkBps[key]} bp`;
-    });
-
     $$("input[data-path-id]", dom.pathParams).forEach((input) => {
       const pathState = state.paths[input.dataset.pathId];
       if (pathState) input.value = pathState[input.dataset.field];
@@ -772,9 +738,6 @@
   function renderRateTable() {
     const code = state.currency;
     const mid = RATES.mid[code];
-    const mc = mid * (1 + state.networkBps.mastercard / 10000);
-    const visa = mid * (1 + state.networkBps.visa / 10000);
-    const up = mid * (1 + state.networkBps.unionpay / 10000);
 
     const bankRows = BANK_ORDER.map((key) => {
       const bank = RATES.banks[key];
@@ -783,13 +746,27 @@
       return [`${bank.short}现汇卖出`, sell, bpsFromMid(sell)];
     }).filter(Boolean);
 
+    const networkRows = [
+      ["Visa", "visa"],
+      ["万事达", "mastercard"],
+      ["银联", "unionpay"]
+    ]
+      .map(([label, key]) => {
+        const value = RATES.networks?.[key]?.cny?.[code];
+        if (!Number.isFinite(value)) return null;
+        return [
+          `${label} 卡组织（${RATES.networks[key].updated}）`,
+          value,
+          bpsFromMid(value)
+        ];
+      })
+      .filter(Boolean);
+
     dom.rateTableTitle.textContent = `当前币种牌价 · 1 ${code}`;
     const rows = [
       ["中间价（基准）", mid, "基准"],
       ...bankRows,
-      ["万事达人民币入账（估算）", mc, bpsFromMid(mc)],
-      ["Visa 人民币入账（估算）", visa, bpsFromMid(visa)],
-      ["银联人民币入账（估算）", up, bpsFromMid(up)]
+      ...networkRows
     ];
 
     dom.rateTableBody.innerHTML = rows
@@ -940,18 +917,6 @@
       }
     });
 
-    dom.networkControls.addEventListener("input", (event) => {
-      const input = event.target.closest("[data-network]");
-      if (!input) return;
-      const key = input.dataset.network;
-      const value = clamp(input.value, 0, 100, state.networkBps[key]);
-      state.networkBps[key] = value;
-      const output = input.parentElement.querySelector("output");
-      if (output) output.textContent = `${value} bp`;
-      saveState();
-      renderResults();
-    });
-
     dom.pathParams.addEventListener("input", (event) => {
       const input = event.target.closest("input[data-path-id]");
       if (!input) return;
@@ -1000,10 +965,21 @@
       element.textContent = `牌价快照 · ${compactSnapshot()}`;
     });
 
+    const networkUpdated = ["visa", "mastercard", "unionpay"]
+      .map((key) => {
+        const network = RATES.networks?.[key];
+        if (!network) return "";
+        return `${network.label} ${network.updated.slice(5).replace("-", "/")}`;
+      })
+      .filter(Boolean)
+      .join(" · ");
+    $$(".js-network-updated").forEach((element) => {
+      element.textContent = networkUpdated || "—";
+    });
+
     dom.amountInput.value = inputNumber(state.amount);
     renderCurrencyChips();
     updateCurrencyUI();
-    renderNetworkControls();
     renderPathParams();
     renderPathTypes();
     bindEvents();

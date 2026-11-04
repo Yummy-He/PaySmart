@@ -311,7 +311,7 @@ window.FX_PATHS = [
     typeRoute: "外币消费 → 万事达折人民币 → 人民币账单",
     typeCopy:
       "人民币账户直接收单，由万事达折算成人民币入账，没有银行购汇环节。最终汇率由卡组织入账日决定。",
-    typeNote: "一次折算；卡组织加点默认 0。"
+    typeNote: "一次折算；卡组织汇率已实查。"
   },
   {
     id: "usd-full",
@@ -359,7 +359,7 @@ window.FX_PATHS = [
     typeRoute: "外币消费 → 银联折人民币 → 人民币账单",
     typeCopy:
       "双标卡走银联网络时，由银联直接折算人民币入账，没有银行购汇环节。能否走银联，取决于收单网络。",
-    typeNote: "一次折算；卡组织加点默认 0。"
+    typeNote: "一次折算；卡组织汇率已实查。"
   }
 ];
 
@@ -379,5 +379,6 @@ window.FX_CURRENCIES = [
   { code: "NZD", name: "新西兰元", symbol: "NZ$", decimals: 2 },
   { code: "MOP", name: "澳门元", symbol: "MOP$", decimals: 2 }
 ];
+
 
 
