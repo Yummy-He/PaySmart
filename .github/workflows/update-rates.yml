@@ -1,19 +1,32 @@
 name: Refresh FX snapshot
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/update-rates.yml"
+      - ".nojekyll"
+      - "index.html"
+      - "styles.css"
+      - "assets/**"
   schedule:
     - cron: "30 */3 * * *"
       timezone: "Asia/Shanghai"
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency: refresh-fx-snapshot
 
 jobs:
   refresh:
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      sha: ${{ steps.commit.outputs.sha }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,13 +40,44 @@ jobs:
         run: npm run update-rates
 
       - name: Commit updated snapshot
+        id: commit
         run: |
           git add assets/rates.js assets/history
-          if git diff --cached --quiet; then
-            echo "No rate changes."
-            exit 0
+          if ! git diff --cached --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "chore: refresh FX snapshot"
+            git push
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "chore: refresh FX snapshot"
-          git push
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    needs: refresh
+    if: ${{ !cancelled() && (needs.refresh.result == 'success' || needs.refresh.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout site
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.refresh.outputs.sha || github.sha }}
+
+      - name: Prepare static files
+        run: |
+          mkdir -p _site
+          cp -r .nojekyll index.html styles.css assets _site/
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

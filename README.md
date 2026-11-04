@@ -78,7 +78,7 @@ npm start
 ### 刷新机制
 
 - **本地**：不会自动刷新，运行 `npm run update-rates` 手动更新。
-- **GitHub Actions**：默认分支中的 `.github/workflows/update-rates.yml` 从北京时间 00:30 起每三小时尝试更新，并将最新快照和历史存档提交到仓库。需要仓库 Actions 有写权限。若网页通过 GitHub Pages 发布，使用 `GITHUB_TOKEN` 推送的提交需要单独部署才能上线。 [GitHub Pages 发布说明](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site#troubleshooting-publishing-from-a-branch)
+- **GitHub Actions**：默认分支中的 `.github/workflows/update-rates.yml` 从北京时间 00:30 起每三小时尝试更新。抓取成功后提交最新快照和历史存档，再自动发布到 GitHub Pages。网页文件推送到 `main` 时也会发布。 [GitHub Pages 发布说明](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site#publishing-with-a-custom-github-actions-workflow)
 - `assets/history/` 按北京时间保存历史快照。已补录 2026-11-01 至 2026-11-03 的 Visa、万事达和银联历史汇率。11 月 2 日的中间价取自国家外汇管理局，11 月 3 日保留项目原有基准。11 月 1 日的银行牌价与中间价参考 10 月 30 日，卡组织使用 11 月 1 日的历史记录。每次成功更新另存一份带实际完成时间的日内快照，按日期查询时默认显示当天最后一份。 [国家外汇管理局中间价](https://www.safe.gov.cn/AppStructured/hlw/RMBQuery.do?COLLCC=546877760) · [银行牌价存档](https://www.yohuiquan.com/dailyrate/72.html) · [卡组织历史记录](https://www.kylc.com/upcurrency.html)
 
 ## 计算口径
@@ -121,9 +121,7 @@ git push -u origin main
 
 然后在 GitHub 仓库 **Settings → Pages**：
 
-- Source: `Deploy from a branch`
-- Branch: `main`
-- Folder: `/ (root)`
+- Source: `GitHub Actions`
 
 `.nojekyll` 已包含，静态资源不会被 Jekyll 处理。发布后的地址通常是：
 
