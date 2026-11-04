@@ -344,7 +344,11 @@ ol {
   font-size: clamp(58px, 7.4vw, 106px);
   font-weight: 700;
   letter-spacing: -0.032em;
-  line-height: 1.06;
+  line-height: 1.36;
+}
+
+.hero h1 > span {
+  display: block;
 }
 
 .hero h1 .accent {
@@ -916,6 +920,38 @@ ol {
   text-decoration: underline;
   text-decoration-color: var(--line);
   text-underline-offset: 2px;
+}
+
+.snapshot-controls,
+.manual-quotes {
+  margin-top: 16px;
+  font-size: 14px;
+}
+
+.snapshot-controls label,
+.manual-quotes label {
+  display: block;
+  margin: 8px 0 4px;
+  font-weight: 600;
+}
+
+.snapshot-controls select,
+.manual-quotes input {
+  max-width: 100%;
+  padding: 6px 10px;
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.manual-quotes summary {
+  cursor: pointer;
+}
+
+.route-card[hidden] {
+  display: none;
 }
 
 /* Results */
@@ -2602,7 +2638,6 @@ input[type="range"] {
     margin-top: 18px;
     font-size: clamp(50px, 13vw, 70px);
     letter-spacing: -0.032em;
-    line-height: 1.06;
   }
 
   .hero-lede {

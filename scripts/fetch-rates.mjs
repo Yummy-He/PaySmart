@@ -12,7 +12,7 @@
  *
  * 生成 assets/rates.js。银行牌价统一换算为“人民币 / 1 外币”。
  */
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import https from "node:https";
@@ -26,6 +26,10 @@ const BOCOM_URL =
   "https://www.bankcomm.com/BankCommSite/shtml/jyjr/cn/7158/list.shtml?channelId=7158&anchor=goSCYJ";
 const KYLC_BASE = "https://www.kylc.com";
 const MID_URL = "https://open.er-api.com/v6/latest/CNY";
+const CITIC_URL = "https://etrade.citicbank.com/portalweb/cms/getForeignExchRate.htm";
+const CITIC_SOURCE = "https://www.citicbank.com/common/financialnews/news/202408/t20240829_3716.html";
+const ABC_SOURCE = "https://ewealth.abchina.com/foreignexchange/listprice/";
+const ABC_URL = "https://ewealth.abchina.com/app/data/api/DataService/ExchangeRateV2";
 
 const CURRENCIES = {
   USD: "美元",
@@ -77,6 +81,7 @@ function getText(url, options = {}) {
       },
       (response) => {
         let data = "";
+        response.on("error", reject);
         response.setEncoding("utf8");
         response.on("data", (chunk) => {
           data += chunk;
@@ -114,6 +119,35 @@ function getText(url, options = {}) {
   });
 }
 
+function isPositiveRate(value) {
+  return Number.isFinite(value) && value > 0;
+}
+
+function parseAbc(payload) {
+  const result = {};
+  for (const item of payload.Data?.Table || []) {
+    const code = item.CurrName?.match(/\(([A-Z]{3})\)$/)?.[1];
+    const buy = Number(item.BuyingPrice) / 100;
+    const sell = Number(item.SellPrice) / 100;
+    if (!Object.hasOwn(CURRENCIES, code) || !isPositiveRate(buy) || !isPositiveRate(sell) || buy > sell) continue;
+    if (!Number.isFinite(Date.parse(item.PublishTime))) continue;
+    result[code] = { buy, sell, published: item.PublishTime };
+  }
+  return result;
+}
+
+function parseCitic(payload) {
+  const result = {};
+  for (const item of payload.content?.resultList || []) {
+    const code = BOC_NAME_TO_CODE[item.curName] || { 韩元: "KRW" }[item.curName];
+    const buy = Number(item.cstexcBuyPrice) / 100;
+    const sell = Number(item.cstexcSellPrice) / 100;
+    if (!code || !isPositiveRate(buy) || !isPositiveRate(sell)) continue;
+    result[code] = { buy, sell, published: `${item.quotePriceDate} ${item.quotePriceTime}` };
+  }
+  return result;
+}
+
 function parseBoc(html) {
   const result = {};
   const rowPattern = /<tr data-currency='([^']+)'>(.*?)<\/tr>/gs;
@@ -132,7 +166,7 @@ function parseBoc(html) {
     const sell = Number.parseFloat(cells[3]);
     const published = `${cells[6]} ${cells[7]}`;
 
-    if (Number.isFinite(buy) && Number.isFinite(sell)) {
+    if (isPositiveRate(buy) && isPositiveRate(sell)) {
       result[code] = {
         buy: Number((buy / 100).toFixed(8)),
         sell: Number((sell / 100).toFixed(8)),
@@ -151,7 +185,7 @@ function parseIcbc(payload) {
     if (!CURRENCIES[code]) continue;
     const buy = Number.parseFloat(item.foreignBuy);
     const sell = Number.parseFloat(item.foreignSell);
-    if (!Number.isFinite(buy) || !Number.isFinite(sell)) continue;
+    if (!isPositiveRate(buy) || !isPositiveRate(sell)) continue;
 
     result[code] = {
       buy: Number((buy / 100).toFixed(8)),
@@ -170,7 +204,7 @@ function parseCmb(payload) {
 
     const buy = Number.parseFloat(item.rthBid);
     const sell = Number.parseFloat(item.rthOfr);
-    if (!Number.isFinite(buy) || !Number.isFinite(sell)) continue;
+    if (!isPositiveRate(buy) || !isPositiveRate(sell)) continue;
 
     result[code] = {
       buy: Number((buy / 100).toFixed(8)),
@@ -201,7 +235,7 @@ function parseBocom(html) {
 
     const buy = Number.parseFloat(cells[1]);
     const sell = Number.parseFloat(cells[2]);
-    if (!Number.isFinite(buy) || !Number.isFinite(sell)) continue;
+    if (!isPositiveRate(buy) || !isPositiveRate(sell)) continue;
 
     result[code] = {
       buy: Number((buy / 100).toFixed(8)),
@@ -229,7 +263,7 @@ function parseKylcRate(html) {
   if (!rateMatch || (!fullDateMatch && !shortDateMatch)) return null;
 
   const rate = Number.parseFloat(rateMatch[1]);
-  if (!Number.isFinite(rate)) return null;
+  if (!isPositiveRate(rate)) return null;
 
   const snapshotYear = text.match(/本页快照时间:\s*(\d{4})/)?.[1];
   const year = fullDateMatch?.[1] || snapshotYear || String(new Date().getFullYear());
@@ -297,6 +331,33 @@ function asOfLabel(date) {
   return `${pick("year")}年${pick("month")}月${pick("day")}日 ${pick("hour")}:${pick("minute")}`;
 }
 
+async function replaceFile(target, content) {
+  const temporary = `${target}.${crypto.randomUUID()}.tmp`;
+  try {
+    await writeFile(temporary, content, "utf8");
+    await rename(temporary, target);
+  } finally {
+    await rm(temporary, { force: true });
+  }
+}
+
+async function archiveSnapshot(folder, snapshot) {
+  const fetchedAt = JSON.parse(snapshot.slice(snapshot.indexOf("{"), snapshot.lastIndexOf("}") + 1)).fetchedAt;
+  const date = new Date(fetchedAt);
+  const day = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Shanghai" }).format(date);
+  const time = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Asia/Shanghai",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    fractionalSecondDigits: 3,
+    hourCycle: "h23"
+  }).format(date).replace(/\D/g, "-");
+  const archived = snapshot.replace("window.FX_RATES =", "window.FX_HISTORICAL_RATES =");
+  await replaceFile(resolve(folder, `${day}T${time}.js`), archived);
+  await replaceFile(resolve(folder, `${day}.js`), archived);
+}
+
 async function main() {
   console.log("Fetching BOC quotes...");
   const bocHtml = await getText(BOC_URL);
@@ -334,16 +395,29 @@ async function main() {
     throw new Error("ExchangeRate-API request was not successful.");
   }
 
+  let citic = {};
+  try {
+    citic = parseCitic(JSON.parse(await getText(CITIC_URL)));
+    if (!Object.keys(citic).length) console.warn("CITIC returned no valid quotes.");
+  } catch (error) {
+    console.warn(`CITIC quotes unavailable: ${error.message}`);
+  }
+
+  let abc = {};
+  try {
+    abc = parseAbc(JSON.parse(await getText(ABC_URL)));
+    if (!abc.USD) console.warn("ABC returned no valid USD quote.");
+  } catch (error) {
+    console.warn(`ABC quotes unavailable: ${error.message}`);
+  }
+
   for (const code of Object.keys(CURRENCIES)) {
     if (!boc[code]) throw new Error(`BOC missing ${code}`);
     if (!icbc[code]) throw new Error(`ICBC missing ${code}`);
-    if (!midPayload.rates[code]) throw new Error(`Mid-market missing ${code}`);
+    if (!isPositiveRate(midPayload.rates?.[code])) throw new Error(`Mid-market invalid or missing ${code}`);
   }
   if (!cmb.USD) console.warn("CMB USD quote missing; CMB cards will use BOC fallback.");
   if (!bocom.USD) console.warn("BOCOM USD quote missing; BOCOM cards will use BOC fallback.");
-
-  if (!cmb.USD) cmb = {};
-  if (!bocom.USD) bocom = {};
 
   const mid = {};
   for (const code of Object.keys(CURRENCIES)) {
@@ -381,17 +455,17 @@ async function main() {
   }
 
   const networkData = {
-    visa: { label: "Visa", cny: {}, usd: {}, dates: [] },
-    mastercard: { label: "万事达", cny: {}, usd: {}, dates: [] },
-    unionpay: { label: "银联", cny: {}, dates: [] }
+    visa: { label: "Visa", cny: {}, usd: {}, pairDates: { cny: {}, usd: {} } },
+    mastercard: { label: "万事达", cny: {}, usd: {}, pairDates: { cny: {}, usd: {} } },
+    unionpay: { label: "银联", cny: {}, pairDates: { cny: {} } }
   };
   for (const item of networkResults) {
     networkData[item.brand][item.account][item.code] = item.rate;
-    networkData[item.brand].dates.push(item.date);
+    networkData[item.brand].pairDates[item.account][item.code] = item.date;
   }
   for (const key of ["visa", "mastercard", "unionpay"]) {
-    networkData[key].updated = latestDate(networkData[key].dates);
-    delete networkData[key].dates;
+    const network = networkData[key];
+    network.updated = latestDate(Object.values(network.pairDates).flatMap(Object.values));
   }
   networkData.visa.sourceUrl = `${KYLC_BASE}/huilv/i-visa/cny/usd.html`;
   networkData.mastercard.sourceUrl = `${KYLC_BASE}/huilv/i-mastercard/cny/usd.html`;
@@ -424,7 +498,9 @@ async function main() {
         name: "快易理财网卡组织汇率",
         url: "https://www.kylc.com/upcurrency.html"
       },
-      { name: "ExchangeRate-API 中间价", url: "https://www.exchangerate-api.com/" }
+      { name: "ExchangeRate-API 中间价", url: "https://www.exchangerate-api.com/" },
+      { name: "中信银行外汇牌价", url: CITIC_SOURCE },
+      { name: "中国农业银行结售汇牌价", url: ABC_SOURCE }
     ],
     mid,
     banks: {
@@ -451,22 +527,40 @@ async function main() {
         short: "交行",
         updated: "",
         rates: compactRates(bocom)
+      },
+      citic: {
+        label: "中信银行",
+        short: "中信",
+        updated: citic.USD?.published || "",
+        rates: compactRates(citic)
+      },
+      abc: {
+        label: "中国农业银行",
+        short: "农行",
+        updated: abc.USD?.published.replace("T", " ").replace("+08:00", "") || "",
+        rates: compactRates(abc)
       }
     },
     networks: networkData
   };
 
   const target = resolve(ROOT, "assets/rates.js");
-  await mkdir(dirname(target), { recursive: true });
-  await writeFile(
-    target,
-    `/*\n * 牌价快照。由 scripts/fetch-rates.mjs 生成。\n * 银行牌价单位：人民币 / 1 外币。\n * 中间价单位：人民币 / 1 外币。\n */\nwindow.FX_RATES = ${JSON.stringify(
-      data,
-      null,
-      2
-    )};\n`,
-    "utf8"
-  );
+  const history = resolve(dirname(target), "history");
+  await mkdir(history, { recursive: true });
+  const snapshot = `/*\n * 牌价快照。由 scripts/fetch-rates.mjs 生成。\n * 银行牌价单位：人民币 / 1 外币。\n * 中间价单位：人民币 / 1 外币。\n */\nwindow.FX_RATES = ${JSON.stringify(data, null, 2)};\n`;
+  let previous;
+  try {
+    previous = await readFile(target, "utf8");
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+  if (previous) await archiveSnapshot(history, previous);
+  await archiveSnapshot(history, snapshot);
+  const days = (await readdir(history))
+    .filter((name) => /^\d{4}-\d{2}-\d{2}\.js$/.test(name))
+    .map((name) => name.slice(0, -3)).sort().reverse();
+  await replaceFile(resolve(history, "dates.js"), `window.FX_HISTORY_DATES = ${JSON.stringify(days)};\n`);
+  await replaceFile(target, snapshot);
 
   console.log(`Wrote ${target}`);
   console.log(`BOC USD sell: ${data.banks.boc.rates.USD.sell}`);

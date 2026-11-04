@@ -30,6 +30,14 @@ window.FX_RATES = {
     {
       "name": "ExchangeRate-API 中间价",
       "url": "https://www.exchangerate-api.com/"
+    },
+    {
+      "name": "中信银行外汇牌价",
+      "url": "https://www.citicbank.com/common/financialnews/news/202408/t20240829_3716.html"
+    },
+    {
+      "name": "中国农业银行结售汇牌价",
+      "url": "https://ewealth.abchina.com/foreignexchange/listprice/"
     }
   ],
   "mid": {
@@ -242,6 +250,124 @@ window.FX_RATES = {
         "AUD": {
           "buy": 4.6619,
           "sell": 4.6973
+        }
+      }
+    },
+    "citic": {
+      "label": "中信银行",
+      "short": "中信",
+      "updated": "2026年11月04日 15:35:49",
+      "rates": {
+        "USD": {
+          "buy": 6.6645,
+          "sell": 6.6934
+        },
+        "GBP": {
+          "buy": 8.9638,
+          "sell": 9.0308
+        },
+        "EUR": {
+          "buy": 7.4779,
+          "sell": 7.5262
+        },
+        "JPY": {
+          "buy": 0.042013,
+          "sell": 0.042433
+        },
+        "HKD": {
+          "buy": 0.84927,
+          "sell": 0.85264
+        },
+        "CAD": {
+          "buy": 4.7619,
+          "sell": 4.8032
+        },
+        "CHF": {
+          "buy": 8.1474,
+          "sell": 8.2007
+        },
+        "NZD": {
+          "buy": 3.7318,
+          "sell": 3.7691
+        },
+        "AUD": {
+          "buy": 4.6491,
+          "sell": 4.689
+        },
+        "SGD": {
+          "buy": 5.2034,
+          "sell": 5.2363
+        },
+        "KRW": {
+          "buy": 0.004939,
+          "sell": 0.005021
+        },
+        "THB": {
+          "buy": 0.1963,
+          "sell": 0.2001
+        },
+        "MOP": {
+          "buy": 0.8228,
+          "sell": 0.8285
+        }
+      }
+    },
+    "abc": {
+      "label": "中国农业银行",
+      "short": "农行",
+      "updated": "2026-11-04 18:38:53",
+      "rates": {
+        "GBP": {
+          "buy": 8.966660000000001,
+          "sell": 9.02964
+        },
+        "HKD": {
+          "buy": 0.84879,
+          "sell": 0.8521899999999999
+        },
+        "USD": {
+          "buy": 6.6596,
+          "sell": 6.68763
+        },
+        "CHF": {
+          "buy": 8.13299,
+          "sell": 8.19831
+        },
+        "SGD": {
+          "buy": 5.20253,
+          "sell": 5.239070000000001
+        },
+        "JPY": {
+          "buy": 0.04196,
+          "sell": 0.04226
+        },
+        "CAD": {
+          "buy": 4.76262,
+          "sell": 4.80088
+        },
+        "AUD": {
+          "buy": 4.66402,
+          "sell": 4.69678
+        },
+        "EUR": {
+          "buy": 7.48212,
+          "sell": 7.53468
+        },
+        "MOP": {
+          "buy": 0.82365,
+          "sell": 0.82695
+        },
+        "THB": {
+          "buy": 0.19751000000000002,
+          "sell": 0.1991
+        },
+        "NZD": {
+          "buy": 4.3625,
+          "sell": 4.3888
+        },
+        "KRW": {
+          "buy": 0.00481,
+          "sell": 0.00517
         }
       }
     }

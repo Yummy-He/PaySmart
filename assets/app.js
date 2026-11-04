@@ -1,15 +1,21 @@
 (function () {
   "use strict";
 
-  const RATES = window.FX_RATES;
+  const LATEST_RATES = window.FX_RATES;
+  let RATES = LATEST_RATES;
   const CARDS = window.FX_CARDS;
   const PATHS = window.FX_PATHS;
   const CURRENCIES = window.FX_CURRENCIES;
+  if (!RATES || !CARDS || !PATHS || !CURRENCIES) {
+    console.error("汇率或支付路径数据未加载。");
+    return;
+  }
   const CURRENCY_MAP = Object.fromEntries(CURRENCIES.map((c) => [c.code, c]));
   const CARD_MAP = Object.fromEntries(CARDS.map((c) => [c.id, c]));
-  const PATH_MAP = Object.fromEntries(PATHS.map((p) => [p.id, p]));
   const STORAGE_KEY = "zeka-state-v5";
-  const BANK_ORDER = ["boc", "icbc", "cmb", "bocom"];
+  const BANK_ORDER = ["boc", "icbc", "cmb", "bocom", "abc", "citic"];
+  const historyDates = window.FX_HISTORY_DATES || [];
+  let abcQuoteOverride = null;
 
   const DEFAULT_STATE = (() => {
     const pathState = {};
@@ -40,6 +46,12 @@
     amountPrefix: $("#amountPrefix"),
     currencyChips: $("#currencyChips"),
     currencyLabel: $("#currencyLabel"),
+    snapshotDate: $("#snapshotDate"),
+    snapshotStatus: $("#snapshotStatus"),
+    manualQuotes: $("#manualQuotes"),
+    abcQuote: $("#abcQuote"),
+    unavailablePaths: $("#unavailablePaths"),
+    rankingTitle: $("#rankingTitle"),
     factRows: $("#factRows"),
     factNote: $("#factNote"),
     winnerCard: $("#winnerCard"),
@@ -70,6 +82,7 @@
   }
 
   function clamp(value, min, max, fallback) {
+    if (typeof value !== "number" && typeof value !== "string") return fallback;
     const parsed = Number(value);
     if (!Number.isFinite(parsed)) return fallback;
     return Math.min(max, Math.max(min, parsed));
@@ -85,8 +98,8 @@
     if (!saved || typeof saved !== "object") return freshState();
 
     const next = freshState();
-    next.amount = clamp(saved.amount, 0, 1000000000, next.amount);
-    if (saved.currency && CURRENCY_MAP[saved.currency]) {
+    next.amount = Number(clamp(saved.amount, 0, 1000000000, next.amount).toFixed(2));
+    if (typeof saved.currency === "string" && Object.hasOwn(CURRENCY_MAP, saved.currency)) {
       next.currency = saved.currency;
     }
 
@@ -203,10 +216,6 @@
     return Number.isFinite(value) ? value : RATES.mid[code] / RATES.mid.USD;
   }
 
-  function networkDate(networkKey) {
-    return RATES.networks?.[networkKey]?.updated || "";
-  }
-
   function pathFees(path) {
     const saved = state.paths[path.id] || {};
     const card = CARD_MAP[path.primaryCardId];
@@ -216,10 +225,10 @@
     };
   }
 
-  function bankRate(card, code, field = "sell") {
-    const own = RATES.banks[card.rateSource]?.rates?.[code]?.[field];
-    if (Number.isFinite(own)) return own;
-    return RATES.banks.boc.rates[code][field];
+  function networkRateNote(networkKey, account, code) {
+    const network = RATES.networks?.[networkKey];
+    if (!Number.isFinite(network?.[account]?.[code])) return "按中间价估算";
+    return network.pairDates?.[account]?.[code] || "快易理财网查询价";
   }
 
   function computePath(path) {
@@ -227,12 +236,39 @@
     return computeCard(card, path, pathFees(path));
   }
 
+  function abcUsdQuote() {
+    const override = RATES === LATEST_RATES ? abcQuoteOverride : null;
+    return override ?? RATES.banks.abc?.rates?.USD?.sell;
+  }
+
+  function unavailableReason(card) {
+    const code = state.currency;
+    if (card.manualQuote && !abcUsdQuote()) {
+      return "所选日期缺少农行美元卖出价";
+    }
+    if (RATES === LATEST_RATES) return "";
+    if (card.rail === "multi" && card.supported.includes(code)) {
+      return Number.isFinite(RATES.banks[card.rateSource]?.rates?.[code]?.sell)
+        ? "" : "历史快照缺少本行对应币种牌价";
+    }
+    if (card.rateSource && !Number.isFinite(RATES.banks[card.rateSource]?.rates?.USD?.sell)) {
+      return "历史快照缺少本行美元牌价";
+    }
+    const account = card.rail === "cny-card" ? "cny" : "usd";
+    if (account === "usd" && code === "USD") return "";
+    return Number.isFinite(RATES.networks?.[card.network]?.[account]?.[code])
+      ? "" : "历史快照缺少对应的卡组织汇率";
+  }
+
   function computeCard(card, path, fees) {
     const amount = Math.max(0, Number(state.amount) || 0);
     const code = state.currency;
-    const mid = RATES.mid[code];
-    const bank = RATES.banks[card.rateSource] || RATES.banks.boc;
+    const direct = card.rail === "multi" && card.supported?.includes(code);
+    const bankCode = direct ? code : "USD";
+    const ownBank = RATES.banks[card.rateSource];
+    const bank = Number.isFinite(ownBank?.rates?.[bankCode]?.sell) ? ownBank : RATES.banks.boc;
     const networkName = card.networkLabel;
+    const quote = card.manualQuote ? abcUsdQuote() : null;
 
     let base = 0;
     let effectiveNetworkRate = 0;
@@ -244,8 +280,8 @@
     let usedUsd = false;
     let missingMultiCurrency = false;
 
-    if (card.rail === "multi" && Array.isArray(card.supported) && card.supported.includes(code)) {
-      const bankSell = bankRate(card, code, "sell");
+    if (direct) {
+      const bankSell = bank.rates[code].sell;
       const fundingTitle =
         card.funding === "rmb-card"
           ? `用${bank.short}人民币卡购汇转入`
@@ -281,48 +317,6 @@
         { label: "银行购汇", value: `${foreign(amount, code)} × ${bankSell.toFixed(4)}` },
         { label: "折算后金额", value: cny(base) }
       ];
-    } else if (card.rail === "multi") {
-      missingMultiCurrency = true;
-      usedUsd = true;
-      const usdPerUnit = networkUsd(card.network, code);
-      const usdAmount = amount * usdPerUnit;
-      const usdSell = bankRate(card, "USD", "sell");
-      base = usdAmount * usdSell;
-      accountAmount = usdAmount;
-      effectiveNetworkRate = usdPerUnit;
-      routeTag = "经美元";
-      flow = [
-        `${code} 消费`,
-        code === "USD" ? "美元入账" : `${networkName} 折 USD`,
-        `${bank.short}购汇`
-      ];
-      steps = [
-        code === "USD"
-          ? {
-              title: "美元消费，无需卡组织折算",
-              body: "交易币种已经是美元账户币种。"
-            }
-          : {
-              title: `${networkName} 把 ${foreign(amount, code)} 折成美元`,
-              body: `该币种不在多币种账户内。按 ${networkName} 卡组织汇率：1 ${code} ≈ ${usdPerUnit.toFixed(
-                rateDecimals(usdPerUnit)
-              )} USD（${networkDate(card.network)}）。`
-            },
-        {
-          title: `按${bank.short}美元现汇卖出价购汇`,
-          body: `1 USD = ${rate(usdSell, "USD")}；美元金额 ${foreign(usdAmount, "USD")}。`
-        }
-      ];
-      rows = [
-        code === "USD"
-          ? { label: "卡组织折算", value: "美元消费，无折算" }
-          : {
-              label: "卡组织折算",
-              value: `${foreign(amount, code)} → ${foreign(usdAmount, "USD")}`
-            },
-        { label: "银行购汇", value: `${foreign(usdAmount, "USD")} × ${usdSell.toFixed(4)}` },
-        { label: "折算后金额", value: cny(base) }
-      ];
     } else if (card.rail === "cny-card") {
       const cnyPerUnit = networkCny(card.network, code);
       base = amount * cnyPerUnit;
@@ -336,7 +330,7 @@
           body: `按 ${networkName} 卡组织汇率：1 ${code} ≈ ${rate(
             cnyPerUnit,
             code
-          )}（${networkDate(card.network)}）。`
+          )}（${networkRateNote(card.network, "cny", code)}）。`
         },
         {
           title: "人民币直接入账",
@@ -348,34 +342,40 @@
         { label: "折算后金额", value: cny(base) }
       ];
     } else {
+      missingMultiCurrency = card.rail === "multi";
       usedUsd = true;
       const usdPerUnit = networkUsd(card.network, code);
       const usdAmount = amount * usdPerUnit;
-      const usdSell = bankRate(card, "USD", "sell");
+      const usdSell = quote ?? bank.rates.USD.sell;
+      const bankName = card.manualQuote === "usd" ? "农行" : bank.short;
       base = usdAmount * usdSell;
       accountAmount = usdAmount;
       effectiveNetworkRate = usdPerUnit;
-      routeTag = code === "USD" ? "美元直付" : "折美元后购汇";
+      routeTag = quote ? "授权日人民币记账" : missingMultiCurrency ? "经美元" : code === "USD" ? "美元直付" : "折美元后购汇";
       flow = [
         `${code} 消费`,
         code === "USD" ? "美元入账" : `${networkName} 折 USD`,
-        `${bank.short}购汇`
+        card.manualQuote === "usd" ? "农行折人民币" : `${bankName}购汇`
       ];
       steps = [
         code === "USD"
           ? {
               title: "美元消费，无需卡组织折算",
-              body: "交易币种已经是美元账户币种。"
+              body: quote ? "美元交易金额直接交由农行折算。" : "交易币种已经是美元账户币种。"
             }
           : {
               title: `${networkName} 把 ${foreign(amount, code)} 折成美元`,
               body: `按 ${networkName} 卡组织汇率：1 ${code} ≈ ${usdPerUnit.toFixed(
                 rateDecimals(usdPerUnit)
-              )} USD（${networkDate(card.network)}）。`
+              )} USD（${networkRateNote(card.network, "usd", code)}）。`
             },
         {
-          title: `按${bank.short}美元现汇卖出价购汇`,
-          body: `1 USD = ${rate(usdSell, "USD")}；美元金额 ${foreign(usdAmount, "USD")}。`
+          title: card.manualQuote === "usd" ? "农行按授权日美元卖出牌价折人民币" : `按${bankName}美元现汇卖出价购汇`,
+          body: `1 USD = ${rate(usdSell, "USD")}，美元金额 ${foreign(usdAmount, "USD")}。${
+            quote ? (RATES === LATEST_RATES && abcQuoteOverride
+              ? " 使用你填写的农行卖出价。"
+              : ` 农行报价时间 ${ownBank.updated}。`) : ""
+          }`
         }
       ];
       rows = [
@@ -420,10 +420,10 @@
       });
     }
 
-    let verdict = `${card.pros}。${card.caveat}。`;
+    let verdict = card.caveat ? `${card.pros}。${card.caveat}。` : card.pros;
     if (missingMultiCurrency) {
       verdict = "该币种不在多币种账户内，实际走美元中转，“直付”的路径优势不成立。";
-    } else if (card.rail === "foreign-usd") {
+    } else if (card.rail === "foreign-usd" && !card.manualQuote) {
       if (code === "USD") {
         verdict =
           fees.feePct > 0
@@ -432,8 +432,16 @@
       } else {
         verdict = `${card.pros}；但 ${code} 不是美元，卡组织和银行会各折算一次，成本通常更高。`;
       }
-    } else if (card.rail === "cny-card") {
+    } else if (card.rail === "cny-card" && card.caveat) {
       verdict = `${card.pros}。最终汇率由卡组织入账日决定。`;
+    }
+
+    if (card.rateSource && bank !== ownBank && !quote) {
+      verdict += `快照缺少${ownBank?.short || "发卡行"} ${bankCode} 牌价，本路径用${bank.short}牌价估算。`;
+    }
+    const networkAccount = usedUsd && code !== "USD" ? "usd" : card.rail === "cny-card" && !quote ? "cny" : null;
+    if (networkAccount && !Number.isFinite(RATES.networks?.[card.network]?.[networkAccount]?.[code])) {
+      verdict += "快照缺少该币种对的卡组织汇率，本路径用中间价估算。";
     }
 
     return {
@@ -458,12 +466,9 @@
   }
 
   function computeAll() {
-    const results = PATHS.map(computePath);
-    results.sort((a, b) => {
-      if (a.total !== b.total) return a.total - b.total;
-      return PATHS.findIndex((p) => p.id === a.path.id) - PATHS.findIndex((p) => p.id === b.path.id);
-    });
-    return results;
+    return PATHS.filter((path) => !unavailableReason(CARD_MAP[path.primaryCardId]))
+      .map(computePath)
+      .sort((a, b) => a.total - b.total);
   }
 
   /* ---------------------------------------------------------
@@ -547,7 +552,7 @@
           <p class="type-copy">${path.typeCopy}</p>
           <div class="type-bottom">
             <span class="type-card-tag">${path.representativeLabel}</span>
-            <span class="type-note">${path.typeNote}</span>
+            <span class="type-note">${path.source ? `<a href="${path.source}" target="_blank" rel="noopener noreferrer">${path.typeNote}</a>` : path.typeNote}</span>
           </div>
         </article>`
     ).join("");
@@ -584,7 +589,8 @@
         <strong>${rate(mid, code)}</strong>
       </div>
       ${bankRows}`;
-    dom.factNote.innerHTML = `牌价快照 ${RATES.asOfLabel}。卡组织汇率按中间价加点估算，可在下方“汇率与费用假设”中调整。`;
+    dom.factNote.textContent = RATES.archiveNote ||
+      `牌价快照 ${RATES.asOfLabel}。卡组织汇率来自快易理财网；缺失牌价时，替用来源会标在路径详情中。`;
   }
 
   function renderFocusCard(focus, winner, results) {
@@ -635,7 +641,7 @@
       </div>
       <div class="winner-footer">
         <div class="winner-rate">
-          <span>实际折算率</span>
+          <span>预计有效折算率</span>
           <strong>${hasAmount ? ratePerUnit(focus.effectiveRate, state.currency) : "—"}</strong>
         </div>
         <div class="winner-flow">
@@ -755,7 +761,7 @@
         const value = RATES.networks?.[key]?.cny?.[code];
         if (!Number.isFinite(value)) return null;
         return [
-          `${label} 卡组织（${RATES.networks[key].updated}）`,
+          `${label} 卡组织（${networkRateNote(key, "cny", code)}）`,
           value,
           bpsFromMid(value)
         ];
@@ -793,17 +799,28 @@
     currentResults = computeAll();
     currentWinner = currentResults[0];
 
-    if (selectedPathId && !PATH_MAP[selectedPathId]) selectedPathId = null;
+    if (!currentResults.some((result) => result.path.id === selectedPathId)) selectedPathId = null;
     const active =
       currentResults.find((result) => result.path.id === selectedPathId) || currentWinner;
 
     renderFactRows();
-    renderFocusCard(active, currentWinner, currentResults);
+    $("#routeCard").hidden = !active;
+    if (active) {
+      renderFocusCard(active, currentWinner, currentResults);
+      renderRoute(active);
+    } else {
+      dom.winnerCard.setAttribute("aria-label", "暂无比较结果");
+      dom.winnerContent.textContent = "这份快照缺少计算该币种所需的牌价。";
+    }
     renderRanking(currentWinner, currentResults);
-    renderRoute(active);
     renderRateTable();
+    dom.rankingTitle.textContent = `${currentResults.length} 条可比较路径`;
+    dom.unavailablePaths.textContent = PATHS.map((path) => {
+      const reason = unavailableReason(CARD_MAP[path.primaryCardId]);
+      return reason ? `${path.name}（${reason}）` : "";
+    }).filter(Boolean).join("；");
 
-    if (options.announce) {
+    if (options.announce && active) {
       if (selectedPathId && active.path.id !== currentWinner.path.id) {
         announce(
           `当前查看 ${active.path.name}，预计入账 ${cny(
@@ -825,10 +842,10 @@
      --------------------------------------------------------- */
 
   function parseAmount(raw) {
-    const cleaned = String(raw).replace(/,/g, "").replace(/[^\d.]/g, "");
-    const parsed = Number.parseFloat(cleaned);
-    if (!Number.isFinite(parsed)) return 0;
-    return Math.min(1000000000, Math.max(0, parsed));
+    const value = raw.normalize("NFKC").trim();
+    if (!value) return 0;
+    if (!/^(?:(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d{0,2})?|\.\d{1,2})$/.test(value)) return null;
+    return Math.min(1000000000, Number(value.replace(/,/g, "")));
   }
 
   function setAmount(value, announceChange = false) {
@@ -838,12 +855,20 @@
   }
 
   function bindEvents() {
+    dom.snapshotDate.addEventListener("change", changeSnapshot);
+    dom.abcQuote.addEventListener("input", () => {
+      abcQuoteOverride = readManualQuote(dom.abcQuote);
+      renderResults();
+    });
     dom.amountInput.addEventListener("input", (event) => {
-      setAmount(parseAmount(event.target.value));
+      const amount = parseAmount(event.target.value);
+      event.target.setAttribute("aria-invalid", String(amount === null));
+      if (amount !== null) setAmount(amount);
     });
 
     dom.amountInput.addEventListener("blur", () => {
       dom.amountInput.value = state.amount > 0 ? inputNumber(state.amount) : "";
+      dom.amountInput.removeAttribute("aria-invalid");
     });
 
     dom.amountInput.addEventListener("focus", () => {
@@ -940,6 +965,8 @@
 
     dom.resetBtn.addEventListener("click", () => {
       state = freshState();
+      abcQuoteOverride = null;
+      dom.abcQuote.value = "";
       selectedPathId = null;
       saveState();
       dom.amountInput.value = inputNumber(state.amount);
@@ -955,14 +982,57 @@
      Init
      --------------------------------------------------------- */
 
-  function init() {
-    if (!RATES || !CARDS || !PATHS || !CURRENCIES) {
-      console.error("汇率数据未加载。");
-      return;
-    }
+  function readManualQuote(input) {
+    const value = input.valueAsNumber;
+    return Number.isFinite(value) && value > 0 && value <= 1000 ? value : null;
+  }
 
+  function snapshotDay(snapshot) {
+    return snapshot.date || new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Shanghai" })
+      .format(new Date(snapshot.fetchedAt));
+  }
+
+  function loadHistoricalSnapshot(date) {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = `assets/history/${date}.js`;
+      script.onload = () => {
+        const snapshot = window.FX_HISTORICAL_RATES;
+        delete window.FX_HISTORICAL_RATES;
+        script.remove();
+        if (snapshot && snapshotDay(snapshot) === date) resolve(snapshot);
+        else reject(new Error("Invalid historical snapshot"));
+      };
+      script.onerror = () => {
+        script.remove();
+        reject(new Error("Historical snapshot unavailable"));
+      };
+      document.head.append(script);
+    });
+  }
+
+  async function changeSnapshot() {
+    const date = dom.snapshotDate.value;
+    dom.snapshotDate.disabled = true;
+    try {
+      RATES = date && historyDates.includes(date) ? await loadHistoricalSnapshot(date) : LATEST_RATES;
+      selectedPathId = null;
+      updateSnapshotUI();
+      renderResults({ announce: true });
+    } catch {
+      dom.snapshotDate.value = RATES === LATEST_RATES ? "" : snapshotDay(RATES);
+      dom.snapshotStatus.textContent = `该日期加载失败。仍使用 ${RATES.asOfLabel} 的快照。`;
+    } finally {
+      dom.snapshotDate.disabled = false;
+    }
+  }
+
+  function updateSnapshotUI() {
+    const latest = RATES === LATEST_RATES;
+    dom.snapshotStatus.textContent = `${latest ? "最新可用快照" : "历史快照"} · ${RATES.asOfLabel}（北京时间）`;
+    dom.manualQuotes.hidden = !latest;
     $$(".js-snapshot").forEach((element) => {
-      element.textContent = `牌价快照 · ${compactSnapshot()}`;
+      element.textContent = `${latest ? "牌价快照" : "历史快照"} · ${compactSnapshot()}`;
     });
 
     const networkUpdated = ["visa", "mastercard", "unionpay"]
@@ -976,7 +1046,14 @@
     $$(".js-network-updated").forEach((element) => {
       element.textContent = networkUpdated || "—";
     });
+  }
 
+  function init() {
+    const latestDay = snapshotDay(LATEST_RATES);
+    for (const date of historyDates) {
+      if (date < latestDay) dom.snapshotDate.add(new Option(date, date));
+    }
+    updateSnapshotUI();
     dom.amountInput.value = inputNumber(state.amount);
     renderCurrencyChips();
     updateCurrencyUI();

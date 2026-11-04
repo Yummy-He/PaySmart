@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
-import { readFile, stat } from "node:fs/promises";
-import { extname, join, normalize, resolve, sep } from "node:path";
+import { readFile, realpath } from "node:fs/promises";
+import { extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(fileURLToPath(new URL(".", import.meta.url)));
@@ -11,50 +11,47 @@ const MIME = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
-  ".mjs": "text/javascript; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
   ".svg": "image/svg+xml",
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".webp": "image/webp",
-  ".ico": "image/x-icon",
-  ".woff2": "font/woff2",
-  ".txt": "text/plain; charset=utf-8"
+  ".jpg": "image/jpeg"
 };
 
-function safePath(urlPath) {
-  const decoded = decodeURIComponent(urlPath.split("?")[0]);
-  const requested = decoded === "/" ? "/index.html" : decoded;
-  const absolute = resolve(join(ROOT, normalize(requested)));
-
-  if (absolute !== ROOT && !absolute.startsWith(ROOT + sep)) {
-    return null;
-  }
-  return absolute;
-}
+const PUBLIC_FILE = /^\/(?:index\.html|styles\.css|assets\/[\w-]+\.(?:js|svg)|assets\/history\/(?:dates|\d{4}-\d{2}-\d{2}(?:T\d{2}-\d{2}-\d{2}-\d{3})?)\.js|preview\/[\w-]+\.jpg)$/;
 
 const server = createServer(async (request, response) => {
-  const filePath = safePath(request.url || "/");
-
-  if (!filePath) {
-    response.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
-    response.end("Forbidden");
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    response.writeHead(405, { Allow: "GET, HEAD" }).end();
     return;
   }
 
+  let pathname;
   try {
-    const info = await stat(filePath);
-    const target = info.isDirectory() ? join(filePath, "index.html") : filePath;
+    pathname = decodeURIComponent((request.url || "/").split("?")[0]);
+  } catch {
+    response.writeHead(400).end("Bad request");
+    return;
+  }
+  if (pathname === "/") pathname = "/index.html";
+
+  try {
+    if (!PUBLIC_FILE.test(pathname)) {
+      response.writeHead(404).end("Not found");
+      return;
+    }
+    const target = await realpath(join(ROOT, pathname));
+    if (target !== join(await realpath(ROOT), pathname)) {
+      response.writeHead(404).end("Not found");
+      return;
+    }
     const body = await readFile(target);
 
     response.writeHead(200, {
       "Content-Type": MIME[extname(target).toLowerCase()] || "application/octet-stream",
+      "Content-Length": body.length,
       "Cache-Control": "no-cache",
       "X-Content-Type-Options": "nosniff"
     });
-    response.end(body);
-  } catch (error) {
+    response.end(request.method === "HEAD" ? undefined : body);
+  } catch {
     response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
     response.end("Not found");
   }

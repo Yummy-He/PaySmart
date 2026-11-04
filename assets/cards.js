@@ -261,6 +261,37 @@ window.FX_CARDS = [
     pros: "美元账户路径简单",
     caveat: "两次转换；货转费默认 0，需按实际卡设置",
     supported: null
+  },
+  {
+    "id": "abc-visa-auto",
+    "name": "农行全球支付 Visa（已开通人民币记账）",
+    "art": "forest",
+    "network": "visa",
+    "networkLabel": "Visa",
+    "rail": "foreign-usd",
+    "rateSource": "abc",
+    "manualQuote": "usd",
+    "feePct": 0,
+    "cashbackPct": 0,
+    "type": "农行授权日人民币记账",
+    "path": "外币消费 → Visa 折美元 → 农行按授权日牌价折人民币",
+    "pros": "需在农行掌银开通。按授权日农行美元卖出牌价折算。",
+    "source": "https://www.abchina.com/cn/CreditCard/cjwt/202511/t20251110_2508307.htm"
+  },
+  {
+    "id": "citic-visa-cny",
+    "name": "中信全币通 Visa",
+    "art": "blue",
+    "network": "visa",
+    "networkLabel": "Visa",
+    "rail": "cny-card",
+    "rateSource": null,
+    "feePct": 0,
+    "cashbackPct": 0,
+    "type": "Visa 人民币入账",
+    "path": "外币消费 → 折人民币 → 人民币账单",
+    "pros": "用 Visa 查询汇率估算，最终折算以中信账单为准。",
+    "source": "https://www.citicbank.com/about/companynews/banknew/message/201606/t20160628_34627.html"
   }
 ];
 
@@ -311,7 +342,7 @@ window.FX_PATHS = [
     typeRoute: "外币消费 → 万事达折人民币 → 人民币账单",
     typeCopy:
       "人民币账户直接收单，由万事达折算成人民币入账，没有银行购汇环节。最终汇率由卡组织入账日决定。",
-    typeNote: "一次折算；卡组织汇率已实查。"
+    typeNote: "按卡组织参考汇率折算一次。"
   },
   {
     id: "usd-full",
@@ -359,7 +390,43 @@ window.FX_PATHS = [
     typeRoute: "外币消费 → 银联折人民币 → 人民币账单",
     typeCopy:
       "双标卡走银联网络时，由银联直接折算人民币入账，没有银行购汇环节。能否走银联，取决于收单网络。",
-    typeNote: "一次折算；卡组织汇率已实查。"
+    typeNote: "按卡组织参考汇率折算一次。"
+  },
+  {
+    "id": "abc-auto",
+    "index": "07",
+    "name": "农行授权日人民币记账",
+    "shortName": "农行授权日人民币记账",
+    "mark": "USD",
+    "art": "forest",
+    "primaryCardId": "abc-visa-auto",
+    "representativeCardIds": [
+      "abc-visa-auto"
+    ],
+    "representativeLabel": "农行全球支付 Visa（已开通人民币记账）",
+    "titleHtml": "农行授权日人民币记账",
+    "typeRoute": "外币消费 → Visa 折美元 → 农行按授权日牌价折人民币",
+    "typeCopy": "需在农行掌银开通。按授权日农行美元卖出牌价折算。",
+    "typeNote": "查看银行说明",
+    "source": "https://www.abchina.com/cn/CreditCard/cjwt/202511/t20251110_2508307.htm"
+  },
+  {
+    "id": "visa-cny",
+    "index": "08",
+    "name": "Visa 人民币入账",
+    "shortName": "Visa 人民币入账",
+    "mark": "V",
+    "art": "blue",
+    "primaryCardId": "citic-visa-cny",
+    "representativeCardIds": [
+      "citic-visa-cny"
+    ],
+    "representativeLabel": "中信全币通 Visa",
+    "titleHtml": "Visa 人民币入账",
+    "typeRoute": "外币消费 → 折人民币 → 人民币账单",
+    "typeCopy": "用 Visa 查询汇率估算，最终折算以中信账单为准。",
+    "typeNote": "查看银行说明",
+    "source": "https://www.citicbank.com/about/companynews/banknew/message/201606/t20160628_34627.html"
   }
 ];
 
