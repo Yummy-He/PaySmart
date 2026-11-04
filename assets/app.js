@@ -8,7 +8,7 @@
   const CURRENCY_MAP = Object.fromEntries(CURRENCIES.map((c) => [c.code, c]));
   const CARD_MAP = Object.fromEntries(CARDS.map((c) => [c.id, c]));
   const PATH_MAP = Object.fromEntries(PATHS.map((p) => [p.id, p]));
-  const STORAGE_KEY = "zeka-state-v2";
+  const STORAGE_KEY = "zeka-state-v4";
   const NETWORK_LABELS = {
     mastercard: { name: "万事达", en: "Mastercard" },
     visa: { name: "Visa", en: "Visa" },

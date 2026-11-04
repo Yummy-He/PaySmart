@@ -90,11 +90,11 @@ window.FX_CARDS = [
     cashbackPct: 0,
     art: "graphite",
     type: "美元中转 · 全币种 Visa",
-    tagline: "美元账户，0 货转，按招行美元牌价购汇",
+    tagline: "美元账户，按招行美元牌价购汇",
     detail:
-      "全币种 Visa 仍以美元为账户币种：非美元消费由 Visa 折美元，再按招行美元现汇卖出价购汇。通常不收货币转换费，但仍会经历两次折算。",
+      "全币种 Visa 仍以美元为账户币种：非美元消费由 Visa 折美元，再按招行美元现汇卖出价购汇。是否免货币转换费、费率多少，以你的卡为准。",
     path: "外币消费 → Visa 折美元 → 招行美元卖出价",
-    pros: "0 货币转换费，美元账户路径清晰",
+    pros: "美元账户路径清晰",
     caveat: "非美元消费仍会经历两次转换",
     supported: null
   },
@@ -138,9 +138,9 @@ window.FX_CARDS = [
     type: "银联通道 · 人民币入账",
     tagline: "走银联网络，直接人民币记账",
     detail:
-      "银联通道把消费币种折算成人民币入账，没有银行购汇环节，通常也没有货币转换费。能否走银联，取决于收单网络和卡片路由。",
+      "银联通道把消费币种折算成人民币入账，没有银行购汇环节。是否有货币转换费，以你的卡为准。能否走银联，取决于收单网络和卡片路由。",
     path: "外币消费 → 银联折人民币 → 人民币账单",
-    pros: "人民币入账，通常无货转费",
+    pros: "人民币入账，路径直接",
     caveat: "能否走银联取决于收单网络",
     supported: null
   },
@@ -155,16 +155,16 @@ window.FX_CARDS = [
     network: "visa",
     networkLabel: "Visa",
     rateSource: "bocom",
-    feePct: 1.5,
+    feePct: 0,
     cashbackPct: 0,
     art: "forest",
     type: "美元中转 · 双币卡",
     tagline: "卡组织折美元，银行再购汇",
     detail:
-      "典型的美元账户双币卡：没有人民币账户，非美元消费先由 Visa 折算成美元，再由银行按美元现汇卖出价购汇，并加收货币转换费。",
+      "典型的美元账户双币卡：没有人民币账户，非美元消费先由 Visa 折算成美元，再由银行按美元现汇卖出价购汇。是否收货币转换费、费率多少，以你的卡为准。",
     path: "外币消费 → Visa 折美元 → 交行美元卖出价",
     pros: "美元消费时路径简单",
-    caveat: "1.5% 货转费 + 两次转换，通常最贵",
+    caveat: "两次转换；货转费默认 0，需按实际卡设置",
     supported: null
   },
   {
@@ -184,9 +184,9 @@ window.FX_CARDS = [
     type: "银联通道 · 人民币入账",
     tagline: "双标卡走银联，人民币入账",
     detail:
-      "双标卡走银联通道时，由银联把消费币种折算成人民币入账。没有银行购汇环节，也通常没有货币转换费。",
+      "双标卡走银联通道时，由银联把消费币种折算成人民币入账。没有银行购汇环节；是否有货币转换费，以你的卡为准。",
     path: "外币消费 → 银联折人民币 → 人民币账单",
-    pros: "人民币入账，通常无货转费",
+    pros: "人民币入账，路径直接",
     caveat: "能否走银联，取决于收单网络",
     supported: null
   }
@@ -196,31 +196,31 @@ window.FX_PATHS = [
   {
     id: "bank-multi",
     index: "01",
-    name: "银行购汇 · 多币种直付",
-    shortName: "多币种直付",
+    name: "工行购汇 · 多币种直付",
+    shortName: "工行多币种购汇",
     mark: "FX",
     art: "carbon",
     primaryCardId: "icbc-multi",
     representativeCardIds: ["icbc-multi"],
     representativeLabel: "工行 奋斗万事达",
-    titleHtml: "银行购汇<br />多币种直付",
-    typeRoute: "外币消费 → 外币账户 → 银行现汇卖出价",
+    titleHtml: "工行购汇<br />多币种直付",
+    typeRoute: "外币消费 → 工行外币账户 → 工行现汇卖出价",
     typeCopy:
-      "交易币种直接进入卡内外币账户，不经过卡组织二次折算。路径最短，代价是银行牌价本身的买卖点差。",
+      "交易币种直接进入工行外币账户，不经过卡组织二次折算。路径最短，代价是工行牌价本身的买卖点差。",
     typeNote: "币种不在账户列表内时，会先折美元。"
   },
   {
     id: "bank-pure-fx",
     index: "02",
-    name: "银行购汇 · 纯外币多币种",
-    shortName: "纯外币多币种",
+    name: "中行购汇 · 纯外币多币种",
+    shortName: "中行纯外币购汇",
     mark: "FX",
     art: "ivory",
     primaryCardId: "boc-monet",
     representativeCardIds: ["boc-monet"],
     representativeLabel: "中行 莫奈世界卡",
-    titleHtml: "银行购汇<br />纯外币多币种",
-    typeRoute: "外币消费 → 外币账户 → 中行人民币卡购汇转入",
+    titleHtml: "中行购汇<br />纯外币多币种",
+    typeRoute: "外币消费 → 中行外币账户 → 中行人民币卡购汇转入",
     typeCopy:
       "没有人民币账户，但支持多个外币币种。消费直接进入对应外币账户；还款时先用另一张中行人民币卡购汇，再转入外币账户。",
     typeNote: "没有人民币账户，需另一张中行卡购汇。"
@@ -228,66 +228,66 @@ window.FX_PATHS = [
   {
     id: "network-cny",
     index: "03",
-    name: "卡组织汇率 · 人民币入账",
-    shortName: "卡组织人民币入账",
+    name: "万事达人民币入账",
+    shortName: "万事达人民币入账",
     mark: "MC",
     art: "tomato",
     primaryCardId: "boc-mc-cny",
     representativeCardIds: ["boc-mc-cny", "cmb-mc-cny"],
     representativeLabel: "中行万事网联 / 招行万事达",
-    titleHtml: "卡组织汇率<br />人民币入账",
-    typeRoute: "外币消费 → 卡组织折人民币 → 人民币账单",
+    titleHtml: "万事达<br />人民币入账",
+    typeRoute: "外币消费 → 万事达折人民币 → 人民币账单",
     typeCopy:
-      "人民币账户直接收单，只经过一次卡组织折算，没有银行购汇环节。路径干净，最终汇率由入账日决定。",
-    typeNote: "一次折算，通常没有货币转换费。"
+      "人民币账户直接收单，由万事达折算成人民币入账，没有银行购汇环节。最终汇率由卡组织入账日决定。",
+    typeNote: "一次折算；卡组织加点默认 0。"
   },
   {
     id: "usd-full",
     index: "04",
-    name: "美元账户 · 全币种 Visa",
-    shortName: "全币种 Visa",
+    name: "招行购汇 · 全币种 Visa",
+    shortName: "招行全币种购汇",
     mark: "V",
     art: "graphite",
     primaryCardId: "cmb-visa",
     representativeCardIds: ["cmb-visa"],
     representativeLabel: "招行 全币种 Visa",
-    titleHtml: "美元中转<br />全币种 0 货转",
+    titleHtml: "招行购汇<br />全币种 Visa",
     typeRoute: "外币消费 → Visa 折美元 → 招行美元卖出价",
     typeCopy:
-      "全币种 Visa 仍是美元账户：卡组织先折美元，银行再购汇。通常 0 货币转换费，但非美元消费仍经历两次折算。",
-    typeNote: "0 货转，但仍有两次转换。"
+      "全币种 Visa 仍是美元账户：卡组织先折美元，银行再按招行美元卖出价购汇。是否免货转以你的卡为准。",
+    typeNote: "美元账户，两次转换；费率默认 0。"
   },
   {
     id: "usd-dual",
     index: "05",
-    name: "美元账户 · 双币 Visa",
-    shortName: "双币 Visa",
+    name: "交行购汇 · 双币 Visa",
+    shortName: "交行双币购汇",
     mark: "V",
     art: "forest",
     primaryCardId: "bocom-visa",
     representativeCardIds: ["bocom-visa"],
     representativeLabel: "交行 Visa 双币卡",
-    titleHtml: "美元中转<br />双币卡 1.5% 货转",
+    titleHtml: "交行购汇<br />双币 Visa",
     typeRoute: "外币消费 → Visa 折美元 → 交行美元卖出价",
     typeCopy:
-      "典型美元账户双币卡：卡组织先折美元，银行再购汇。若再叠加 1.5% 货转费，通常是几条路径里最贵的。",
-    typeNote: "美元消费时，才会少一次转换。"
+      "典型美元账户双币卡：卡组织先折美元，银行再购汇。是否收货币转换费、费率多少，以你的卡为准。",
+    typeNote: "美元账户，两次转换；费率默认 0。"
   },
   {
     id: "unionpay",
     index: "06",
-    name: "银联通道 · 人民币入账",
+    name: "银联人民币入账",
     shortName: "银联人民币入账",
     mark: "UP",
     art: "sand",
     primaryCardId: "icbc-unionpay",
     representativeCardIds: ["icbc-unionpay", "bocom-unionpay"],
     representativeLabel: "工行银联双标 / 交行银联环球",
-    titleHtml: "银联通道 · 人民币入账",
+    titleHtml: "银联<br />人民币入账",
     typeRoute: "外币消费 → 银联折人民币 → 人民币账单",
     typeCopy:
-      "双标卡走银联网络时，由银联直接折算人民币入账，没有银行购汇环节，通常也没有货币转换费。能否走银联，取决于收单网络。",
-    typeNote: "和卡组织人民币卡往往只差几个基点。"
+      "双标卡走银联网络时，由银联直接折算人民币入账，没有银行购汇环节。能否走银联，取决于收单网络。",
+    typeNote: "一次折算；卡组织加点默认 0。"
   }
 ];
 

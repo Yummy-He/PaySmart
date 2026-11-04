@@ -1349,6 +1349,14 @@ ol {
   color: var(--ink);
 }
 
+.results-caveat {
+  margin-top: 14px;
+  padding: 0 4px;
+  color: var(--muted-light);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
 /* Route detail */
 
 .route-card {

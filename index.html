@@ -200,6 +200,10 @@
             </section>
           </div>
 
+          <p class="results-caveat">
+            默认卡组织加点、货转费和返现均为 0；未填入你的真实费率前，结果会偏乐观，适合先看路径差异。
+          </p>
+
           <section class="route-card" id="routeCard" aria-labelledby="routeTitle">
             <div class="route-head">
               <div>
@@ -229,7 +233,7 @@
             <summary>
               <span class="assumptions-title">
                 汇率与费用假设
-                <span>卡组织加点、货转费、返现均可调整</span>
+                <span>默认 0，按真实账单调整</span>
               </span>
               <span class="assumptions-chevron" aria-hidden="true">
                 <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
@@ -316,9 +320,9 @@
             </div>
             <div class="method-item">
               <span class="method-num">02</span>
-              <h3>卡组织汇率，按加点模拟</h3>
+              <h3>卡组织汇率，默认不加点</h3>
               <p>
-                Visa、万事达、银联的入账汇率不对外提供稳定的静态接口。本页用“中间价 + 可调基点”模拟，默认万事达 25bp、Visa 35bp、银联 30bp。
+                Visa、万事达、银联的入账汇率没有稳定的公开静态接口。没有可靠数据就不猜：默认全部 0bp，即按中间价计算；有真实账单后再逐项调整。
               </p>
             </div>
             <div class="method-item">
@@ -398,31 +402,31 @@
 
             <article class="data-card">
               <div class="data-card-top">
-                <span class="data-status data-status--assumption">建模假设</span>
+                <span class="data-status data-status--assumption">无公开数据</span>
                 <span class="data-num">03</span>
               </div>
               <h3>卡组织汇率加点</h3>
               <p>
-                不是官方实时报价。默认万事达 +25bp、Visa +35bp、银联 +30bp，是用于比较的保守假设，可在下方假设面板逐项调整。
+                没有可靠的公开点数数据，所以默认全部为 0bp，直接按中间价计算。它不是官方卡组织报价，需要按你的真实账单再调整。
               </p>
               <div class="data-meta">
-                <span>更新方式</span>
-                <strong>手动调整</strong>
+                <span>默认值</span>
+                <strong>0bp · 可调</strong>
               </div>
             </article>
 
             <article class="data-card">
               <div class="data-card-top">
-                <span class="data-status data-status--assumption">示例假设</span>
+                <span class="data-status data-status--assumption">用户输入</span>
                 <span class="data-num">04</span>
               </div>
               <h3>路径费率与返现</h3>
               <p>
-                货转费按代表性产品的常见结构设置（0% 或 1.5%），返现默认 0。它们不是银行实时权益，也不是你的实际账单，请按自己的卡改。
+                没有可靠的实时卡权益数据，所以货转费和返现默认全部为 0。它们不是银行实时权益，也不是你的实际账单；请按自己的卡填写。
               </p>
               <div class="data-meta">
-                <span>更新方式</span>
-                <strong>手动调整</strong>
+                <span>默认值</span>
+                <strong>0% · 可调</strong>
               </div>
             </article>
           </div>

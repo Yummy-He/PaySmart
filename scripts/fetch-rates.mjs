@@ -313,10 +313,11 @@ async function main() {
         rates: compactRates(bocom)
       }
     },
+    // 没有可靠的公开卡组织点数数据，默认按中间价（0bp），由用户按账单调整。
     networkBps: {
-      mastercard: 25,
-      visa: 35,
-      unionpay: 30
+      mastercard: 0,
+      visa: 0,
+      unionpay: 0
     }
   };
 
