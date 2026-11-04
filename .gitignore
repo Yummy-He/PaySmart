@@ -8,6 +8,8 @@ m[0-9].png
 d[0-9].png
 fm[0-9].png
 final-*.png
+check-*.png
+test-*.png
 preview/*-raw.png
 node_modules/
 .DS_Store

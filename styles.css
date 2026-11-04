@@ -343,8 +343,8 @@ ol {
   margin: 22px 0 24px;
   font-size: clamp(58px, 7.4vw, 106px);
   font-weight: 700;
-  letter-spacing: -0.072em;
-  line-height: 0.95;
+  letter-spacing: -0.032em;
+  line-height: 1.06;
 }
 
 .hero h1 .accent {
@@ -673,8 +673,8 @@ ol {
 .section-head h2 {
   font-size: clamp(38px, 4.7vw, 64px);
   font-weight: 700;
-  letter-spacing: -0.058em;
-  line-height: 1.02;
+  letter-spacing: -0.028em;
+  line-height: 1.1;
 }
 
 .section-side {
@@ -747,15 +747,16 @@ ol {
 .amount-input {
   width: 100%;
   min-width: 0;
-  padding: 0;
+  padding: 0 0 0 4px;
   border: 0;
   outline: 0;
   background: transparent;
   color: var(--ink);
+  caret-color: var(--accent);
   font-size: clamp(54px, 6.8vw, 88px);
   font-weight: 680;
-  letter-spacing: -0.072em;
-  line-height: 0.96;
+  letter-spacing: -0.03em;
+  line-height: 1.06;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1028,8 +1029,8 @@ ol {
   max-width: 430px;
   font-size: clamp(31px, 3.2vw, 44px);
   font-weight: 680;
-  letter-spacing: -0.055em;
-  line-height: 1.05;
+  letter-spacing: -0.025em;
+  line-height: 1.12;
 }
 
 .winner-type {
@@ -1057,8 +1058,8 @@ ol {
   color: #fff;
   font-size: clamp(44px, 5vw, 62px);
   font-weight: 650;
-  letter-spacing: -0.06em;
-  line-height: 1;
+  letter-spacing: -0.03em;
+  line-height: 1.06;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1192,24 +1193,34 @@ ol {
 }
 
 .rank-row {
+  position: relative;
   display: grid;
   grid-template-columns: 25px 34px minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
-  width: 100%;
-  padding: 14px 0;
+  width: calc(100% + 24px);
+  margin: 0 -12px;
+  padding: 13px 12px;
   border: 0;
-  border-bottom: 1px solid var(--line-soft);
-  outline-offset: 5px;
+  border-radius: 12px;
+  outline-offset: 2px;
   background: transparent;
   text-align: left;
-  transition:
-    background 0.18s ease,
-    padding 0.18s ease;
+  transition: background 0.18s ease;
 }
 
-.rank-row:last-child {
-  border-bottom: 0;
+.rank-row::after {
+  content: "";
+  position: absolute;
+  right: 12px;
+  bottom: 0;
+  left: 12px;
+  height: 1px;
+  background: var(--line-soft);
+}
+
+.rank-row:last-child::after {
+  display: none;
 }
 
 .rank-row:hover {
@@ -1217,7 +1228,11 @@ ol {
 }
 
 .rank-row[aria-expanded="true"] {
-  background: #f7f7f8;
+  background: #f2f2f4;
+}
+
+.rank-row[aria-expanded="true"]::after {
+  opacity: 0;
 }
 
 .rank-num {
@@ -1358,8 +1373,15 @@ ol {
   margin-top: 7px;
   font-size: 26px;
   font-weight: 650;
-  letter-spacing: -0.045em;
-  line-height: 1.15;
+  letter-spacing: -0.03em;
+  line-height: 1.18;
+}
+
+.route-reps {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
 }
 
 .route-kicker {
@@ -1871,8 +1893,8 @@ input[type="range"] {
   margin-top: 27px;
   font-size: clamp(23px, 2.2vw, 29px);
   font-weight: 650;
-  letter-spacing: -0.045em;
-  line-height: 1.12;
+  letter-spacing: -0.025em;
+  line-height: 1.18;
 }
 
 .type-route {
@@ -1971,6 +1993,176 @@ input[type="range"] {
   font-family: Georgia, serif;
   font-size: 10px;
   font-style: italic;
+}
+
+/* =========================================================
+   Data provenance
+   ========================================================= */
+
+.data {
+  padding: 104px 0;
+  background: #fff;
+}
+
+.data-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.data-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 270px;
+  padding: 28px;
+  border-radius: var(--radius-lg);
+  background: var(--canvas);
+}
+
+.data-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.data-status {
+  display: inline-flex;
+  padding: 6px 9px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.07em;
+}
+
+.data-status--official {
+  color: var(--green);
+  background: #eaf4ed;
+}
+
+.data-status--assumption {
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+}
+
+.data-num {
+  color: var(--muted-light);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.data-card h3 {
+  margin-top: 27px;
+  font-size: 25px;
+  font-weight: 650;
+  letter-spacing: -0.032em;
+  line-height: 1.15;
+}
+
+.data-card p {
+  max-width: 500px;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.data-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: auto;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+  color: var(--muted-light);
+  font-size: 10px;
+}
+
+.data-meta strong {
+  color: var(--ink);
+  font-size: 10px;
+  font-weight: 550;
+  text-align: right;
+}
+
+.data-refresh {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  margin-top: 20px;
+  padding: 24px 28px;
+  border-radius: 20px;
+  color: #fff;
+  background: var(--ink);
+}
+
+.data-refresh-label {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--accent);
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.data-refresh p {
+  max-width: 760px;
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.data-refresh code {
+  flex: 0 0 auto;
+  padding: 10px 12px;
+  border: 1px solid #333;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.78);
+  background: #0d0d0e;
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+@media (max-width: 900px) {
+  .data-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .data-card {
+    min-height: 0;
+  }
+
+  .data-refresh {
+    display: block;
+  }
+
+  .data-refresh code {
+    display: inline-block;
+    margin-top: 16px;
+  }
+}
+
+@media (max-width: 700px) {
+  .data {
+    padding: 76px 0;
+  }
+
+  .data-card {
+    padding: 23px;
+    border-radius: 20px;
+  }
+
+  .data-card h3 {
+    margin-top: 22px;
+    font-size: 23px;
+  }
+
+  .data-refresh {
+    padding: 22px;
+  }
 }
 
 /* =========================================================
@@ -2396,7 +2588,8 @@ input[type="range"] {
   .hero h1 {
     margin-top: 18px;
     font-size: clamp(50px, 13vw, 70px);
-    letter-spacing: -0.068em;
+    letter-spacing: -0.032em;
+    line-height: 1.06;
   }
 
   .hero-lede {
@@ -2534,7 +2727,7 @@ input[type="range"] {
   .rank-row {
     grid-template-columns: 20px 32px minmax(0, 1fr) auto;
     gap: 9px;
-    padding: 13px 0;
+    padding: 13px 12px;
   }
 
   .rank-total {
@@ -2738,3 +2931,4 @@ input[type="range"] {
 .mono {
   font-family: var(--font-mono);
 }
+

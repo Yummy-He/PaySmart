@@ -3,22 +3,24 @@
 
   const RATES = window.FX_RATES;
   const CARDS = window.FX_CARDS;
+  const PATHS = window.FX_PATHS;
   const CURRENCIES = window.FX_CURRENCIES;
   const CURRENCY_MAP = Object.fromEntries(CURRENCIES.map((c) => [c.code, c]));
   const CARD_MAP = Object.fromEntries(CARDS.map((c) => [c.id, c]));
-  const STORAGE_KEY = "zeka-state-v1";
+  const PATH_MAP = Object.fromEntries(PATHS.map((p) => [p.id, p]));
+  const STORAGE_KEY = "zeka-state-v2";
   const NETWORK_LABELS = {
     mastercard: { name: "万事达", en: "Mastercard" },
     visa: { name: "Visa", en: "Visa" },
     unionpay: { name: "银联", en: "UnionPay" }
   };
   const BANK_ORDER = ["boc", "icbc", "cmb", "bocom"];
-  const BANK_MARKS = { icbc: "工行", boc: "中行", cmb: "招行", bocom: "交行" };
 
   const DEFAULT_STATE = (() => {
-    const cardState = {};
-    CARDS.forEach((card) => {
-      cardState[card.id] = {
+    const pathState = {};
+    PATHS.forEach((path) => {
+      const card = CARD_MAP[path.primaryCardId];
+      pathState[path.id] = {
         feePct: card.feePct,
         cashbackPct: card.cashbackPct
       };
@@ -27,12 +29,12 @@
       amount: 1000,
       currency: "USD",
       networkBps: { ...RATES.networkBps },
-      cards: cardState
+      paths: pathState
     };
   })();
 
   let state = loadState();
-  let selectedId = null;
+  let selectedPathId = null;
   let currentResults = [];
   let currentWinner = null;
 
@@ -51,11 +53,13 @@
     rankingList: $("#rankingList"),
     routeTitle: $("#routeTitle"),
     routeTag: $("#routeTag"),
+    routeReps: $("#routeReps"),
     routeSteps: $("#routeSteps"),
     routeVerdict: $("#routeVerdict"),
     costList: $("#costList"),
     networkControls: $("#networkControls"),
-    cardParams: $("#cardParams"),
+    pathParams: $("#pathParams"),
+    pathTypes: $("#pathTypes"),
     rateTableTitle: $("#rateTableTitle"),
     rateTableBody: $("#rateTableBody"),
     openAssumptions: $("#openAssumptions"),
@@ -99,16 +103,16 @@
       });
     }
 
-    if (saved.cards && typeof saved.cards === "object") {
-      Object.keys(next.cards).forEach((id) => {
-        const item = saved.cards[id];
+    if (saved.paths && typeof saved.paths === "object") {
+      Object.keys(next.paths).forEach((id) => {
+        const item = saved.paths[id];
         if (!item || typeof item !== "object") return;
-        next.cards[id].feePct = clamp(item.feePct, 0, 5, next.cards[id].feePct);
-        next.cards[id].cashbackPct = clamp(
+        next.paths[id].feePct = clamp(item.feePct, 0, 5, next.paths[id].feePct);
+        next.paths[id].cashbackPct = clamp(
           item.cashbackPct,
           0,
           5,
-          next.cards[id].cashbackPct
+          next.paths[id].cashbackPct
         );
       });
     }
@@ -205,8 +209,9 @@
     return clamp(state.networkBps[card.network], 0, 100, 0);
   }
 
-  function cardFees(card) {
-    const saved = state.cards[card.id] || {};
+  function pathFees(path) {
+    const saved = state.paths[path.id] || {};
+    const card = CARD_MAP[path.primaryCardId];
     return {
       feePct: clamp(saved.feePct, 0, 5, card.feePct),
       cashbackPct: clamp(saved.cashbackPct, 0, 5, card.cashbackPct)
@@ -219,17 +224,17 @@
     return RATES.banks.boc.rates[code][field];
   }
 
-  function bankMark(card) {
-    return BANK_MARKS[card.bank] || card.bank.slice(0, 2);
+  function computePath(path) {
+    const card = CARD_MAP[path.primaryCardId];
+    return computeCard(card, path, pathFees(path));
   }
 
-  function computeCard(card) {
+  function computeCard(card, path, fees) {
     const amount = Math.max(0, Number(state.amount) || 0);
     const code = state.currency;
     const mid = RATES.mid[code];
     const usdMid = RATES.mid.USD;
     const spread = networkBps(card) / 10000;
-    const fees = cardFees(card);
     const bank = RATES.banks[card.rateSource] || RATES.banks.boc;
     const networkName = card.networkLabel;
 
@@ -237,8 +242,6 @@
     let effectiveNetworkRate = 0;
     let accountAmount = 0;
     let routeTag = "";
-    let railLabel = card.railLabel;
-    let typeDisplay = card.type;
     let flow = [];
     let steps = [];
     let rows = [];
@@ -285,7 +288,6 @@
     } else if (card.rail === "multi") {
       missingMultiCurrency = true;
       usedUsd = true;
-      typeDisplay = "银行购汇 · 多币种（经美元）";
       const usdPerUnit = code === "USD" ? 1 : (mid / usdMid) * (1 + spread);
       const usdAmount = amount * usdPerUnit;
       const usdSell = bankRate(card, "USD", "sell");
@@ -436,6 +438,7 @@
     }
 
     return {
+      path,
       card,
       total,
       base,
@@ -445,8 +448,6 @@
       accountAmount,
       effectiveNetworkRate,
       routeTag,
-      railLabel,
-      typeDisplay,
       flow,
       steps,
       rows,
@@ -458,10 +459,10 @@
   }
 
   function computeAll() {
-    const results = CARDS.map(computeCard);
+    const results = PATHS.map(computePath);
     results.sort((a, b) => {
       if (a.total !== b.total) return a.total - b.total;
-      return CARDS.findIndex((c) => c.id === a.card.id) - CARDS.findIndex((c) => c.id === b.card.id);
+      return PATHS.findIndex((p) => p.id === a.path.id) - PATHS.findIndex((p) => p.id === b.path.id);
     });
     return results;
   }
@@ -521,14 +522,14 @@
       .join("");
   }
 
-  function renderCardParams() {
-    dom.cardParams.innerHTML = CARDS.map((card) => {
-      const saved = state.cards[card.id];
+  function renderPathParams() {
+    dom.pathParams.innerHTML = PATHS.map((path) => {
+      const saved = state.paths[path.id];
       return `
         <div class="param-row">
           <div class="param-name">
-            <strong>${card.fullName}</strong>
-            <small>${card.railLabel}</small>
+            <strong>${path.name}</strong>
+            <small>代表：${path.representativeLabel}</small>
           </div>
           <label class="param-input">
             <span>货转</span>
@@ -538,9 +539,9 @@
               max="5"
               step="0.1"
               value="${saved.feePct}"
-              data-card-id="${card.id}"
+              data-path-id="${path.id}"
               data-field="feePct"
-              aria-label="${card.fullName}货币转换费，百分比"
+              aria-label="${path.name}货币转换费，百分比"
             />%
           </label>
           <label class="param-input">
@@ -551,13 +552,32 @@
               max="5"
               step="0.1"
               value="${saved.cashbackPct}"
-              data-card-id="${card.id}"
+              data-path-id="${path.id}"
               data-field="cashbackPct"
-              aria-label="${card.fullName}返现或积分折现，百分比"
+              aria-label="${path.name}返现或积分折现，百分比"
             />%
           </label>
         </div>`;
     }).join("");
+  }
+
+  function renderPathTypes() {
+    dom.pathTypes.innerHTML = PATHS.map(
+      (path) => `
+        <article class="type-card">
+          <div class="type-top">
+            <span class="type-index">${path.index}</span>
+            <span class="type-icon">${path.mark}</span>
+          </div>
+          <h3>${path.titleHtml}</h3>
+          <p class="type-route">${path.typeRoute}</p>
+          <p class="type-copy">${path.typeCopy}</p>
+          <div class="type-bottom">
+            <span class="type-card-tag">${path.representativeLabel}</span>
+            <span class="type-note">${path.typeNote}</span>
+          </div>
+        </article>`
+    ).join("");
   }
 
   function syncAssumptionControls() {
@@ -568,9 +588,9 @@
       if (output) output.textContent = `${state.networkBps[key]} bp`;
     });
 
-    $$("input[data-card-id]", dom.cardParams).forEach((input) => {
-      const cardState = state.cards[input.dataset.cardId];
-      if (cardState) input.value = cardState[input.dataset.field];
+    $$("input[data-path-id]", dom.pathParams).forEach((input) => {
+      const pathState = state.paths[input.dataset.pathId];
+      if (pathState) input.value = pathState[input.dataset.field];
     });
   }
 
@@ -604,8 +624,8 @@
   function renderFocusCard(focus, winner, results) {
     if (!focus || !winner) return;
     const hasAmount = state.amount > 0;
-    const card = focus.card;
-    const isBest = focus.card.id === winner.card.id;
+    const path = focus.path;
+    const isBest = focus.path.id === winner.path.id;
     const mostExpensive = results[results.length - 1];
     const saving = Math.max(0, mostExpensive.total - winner.total);
     const extra = Math.max(0, focus.total - winner.total);
@@ -615,24 +635,24 @@
       if (isBest) {
         note = saving >= 0.01 ? `比最贵路径省 ${cny(saving)}` : "各路径几乎持平";
       } else {
-        note = extra >= 0.005 ? `比最优多 ${cny(extra)}` : "与最优几乎持平";
+        note = extra >= 0.005 ? `比最优路径多 ${cny(extra)}` : "与最优几乎持平";
       }
     }
 
     dom.winnerCard.setAttribute(
       "aria-label",
-      isBest ? "当前最优选择" : "当前查看的支付路径"
+      isBest ? "当前最优路径" : "当前查看的支付路径"
     );
     dom.winnerContent.innerHTML = `
       <div class="winner-top">
         <span class="best-badge${isBest ? "" : " is-viewing"}">${
-          isBest ? "当前最优" : "当前查看"
+          isBest ? "当前最优路径" : "当前查看"
         }</span>
-        <span class="winner-art art-${card.art}">${bankMark(card)}</span>
+        <span class="winner-art art-${path.art}">${path.mark}</span>
       </div>
       <div class="winner-main">
-        <h3>${card.fullName}</h3>
-        <p class="winner-type">${focus.typeDisplay}</p>
+        <h3>${path.shortName}</h3>
+        <p class="winner-type">代表卡：${path.representativeLabel}</p>
         <div class="winner-price">
           <span class="winner-price-label">预计人民币入账</span>
           <strong class="winner-total">${hasAmount ? cny(focus.total) : "—"}</strong>
@@ -677,24 +697,23 @@
       .map((result, index) => {
         const isBest = result === winner;
         const isTie = !isBest && Math.abs(result.total - winner.total) < 0.005;
-        const isSelected = selectedId
-          ? result.card.id === selectedId
-          : result.card.id === winner.card.id;
-        const mark = bankMark(result.card);
+        const isSelected = selectedPathId
+          ? result.path.id === selectedPathId
+          : result.path.id === winner.path.id;
         return `
           <button
             class="rank-row${isBest ? " is-best" : ""}${isTie ? " is-tie" : ""}"
             type="button"
-            data-card-id="${result.card.id}"
+            data-path-id="${result.path.id}"
             aria-expanded="${isSelected}"
             aria-controls="routeCard"
-            aria-label="查看 ${result.card.fullName} 的支付路径，预计入账 ${cny(result.total)}"
+            aria-label="查看 ${result.path.name}，预计入账 ${cny(result.total)}"
           >
             <span class="rank-num">${String(index + 1).padStart(2, "0")}</span>
-            <span class="rank-swatch art-${result.card.art}">${mark}</span>
+            <span class="rank-swatch art-${result.path.art}">${result.path.mark}</span>
             <span class="rank-main">
-              <strong>${result.card.fullName}</strong>
-              <small>${result.railLabel} · ${result.routeTag}</small>
+              <strong>${result.path.name}</strong>
+              <small>代表：${result.path.representativeLabel}</small>
             </span>
             <span class="rank-money">
               <span class="rank-total">${state.amount > 0 ? cny(result.total) : "—"}</span>
@@ -707,12 +726,12 @@
 
   function renderRoute(detail) {
     if (!detail) return;
-    const card = detail.card;
     const hasAmount = state.amount > 0;
     dom.routeTitle.textContent = hasAmount
-      ? `${card.fullName} · ${foreign(state.amount, state.currency)}`
-      : card.fullName;
+      ? `${detail.path.name} · ${foreign(state.amount, state.currency)}`
+      : detail.path.name;
     dom.routeTag.textContent = detail.routeTag;
+    dom.routeReps.textContent = `代表卡：${detail.path.representativeLabel}`;
 
     dom.routeSteps.innerHTML = detail.steps
       .map(
@@ -787,9 +806,9 @@
 
   function updateSelectionUI() {
     if (!currentWinner) return;
-    const activeId = selectedId || currentWinner.card.id;
-    $$("[data-card-id]", dom.rankingList).forEach((button) => {
-      button.setAttribute("aria-expanded", String(button.dataset.cardId === activeId));
+    const activeId = selectedPathId || currentWinner.path.id;
+    $$("[data-path-id]", dom.rankingList).forEach((button) => {
+      button.setAttribute("aria-expanded", String(button.dataset.pathId === activeId));
     });
   }
 
@@ -797,9 +816,9 @@
     currentResults = computeAll();
     currentWinner = currentResults[0];
 
-    if (selectedId && !CARD_MAP[selectedId]) selectedId = null;
+    if (selectedPathId && !PATH_MAP[selectedPathId]) selectedPathId = null;
     const active =
-      currentResults.find((result) => result.card.id === selectedId) || currentWinner;
+      currentResults.find((result) => result.path.id === selectedPathId) || currentWinner;
 
     renderFactRows();
     renderFocusCard(active, currentWinner, currentResults);
@@ -808,15 +827,15 @@
     renderRateTable();
 
     if (options.announce) {
-      if (selectedId && active.card.id !== currentWinner.card.id) {
+      if (selectedPathId && active.path.id !== currentWinner.path.id) {
         announce(
-          `当前查看 ${active.card.fullName}，预计入账 ${cny(
+          `当前查看 ${active.path.name}，预计入账 ${cny(
             active.total
-          )}；最优仍是 ${currentWinner.card.fullName}。`
+          )}；最优仍是 ${currentWinner.path.name}。`
         );
       } else {
         announce(
-          `当前最优是 ${currentWinner.card.fullName}，预计入账 ${cny(
+          `当前最优路径是 ${currentWinner.path.name}，代表卡 ${currentWinner.path.representativeLabel}，预计入账 ${cny(
             currentWinner.total
           )}。共比较 ${currentResults.length} 条支付路径。`
         );
@@ -876,15 +895,15 @@
     });
 
     dom.rankingList.addEventListener("click", (event) => {
-      const button = event.target.closest("[data-card-id]");
+      const button = event.target.closest("[data-path-id]");
       if (!button) return;
-      selectedId = button.dataset.cardId;
+      selectedPathId = button.dataset.pathId;
       updateSelectionUI();
-      const detail = currentResults.find((result) => result.card.id === selectedId);
+      const detail = currentResults.find((result) => result.path.id === selectedPathId);
       if (detail) {
         renderFocusCard(detail, currentWinner, currentResults);
         renderRoute(detail);
-        announce(`已切换到 ${detail.card.fullName}，预计入账 ${cny(detail.total)}。`);
+        announce(`已切换到 ${detail.path.name}，预计入账 ${cny(detail.total)}。`);
 
         if (window.matchMedia("(max-width: 900px)").matches) {
           dom.winnerCard.scrollIntoView({
@@ -899,7 +918,7 @@
 
     dom.winnerContent.addEventListener("click", (event) => {
       if (!event.target.closest("[data-best-link]")) return;
-      selectedId = null;
+      selectedPathId = null;
       renderResults({ announce: true });
     });
 
@@ -933,30 +952,30 @@
       renderResults();
     });
 
-    dom.cardParams.addEventListener("input", (event) => {
-      const input = event.target.closest("input[data-card-id]");
+    dom.pathParams.addEventListener("input", (event) => {
+      const input = event.target.closest("input[data-path-id]");
       if (!input) return;
-      const id = input.dataset.cardId;
+      const id = input.dataset.pathId;
       const field = input.dataset.field;
-      if (!state.cards[id] || !["feePct", "cashbackPct"].includes(field)) return;
-      const value = clamp(input.value, 0, 5, state.cards[id][field]);
-      state.cards[id][field] = value;
+      if (!state.paths[id] || !["feePct", "cashbackPct"].includes(field)) return;
+      const value = clamp(input.value, 0, 5, state.paths[id][field]);
+      state.paths[id][field] = value;
       saveState();
       renderResults();
     });
 
-    dom.cardParams.addEventListener("blur", (event) => {
-      const input = event.target.closest("input[data-card-id]");
+    dom.pathParams.addEventListener("blur", (event) => {
+      const input = event.target.closest("input[data-path-id]");
       if (!input) return;
-      const id = input.dataset.cardId;
+      const id = input.dataset.pathId;
       const field = input.dataset.field;
-      if (!state.cards[id]) return;
-      input.value = state.cards[id][field];
+      if (!state.paths[id]) return;
+      input.value = state.paths[id][field];
     }, true);
 
     dom.resetBtn.addEventListener("click", () => {
       state = freshState();
-      selectedId = null;
+      selectedPathId = null;
       saveState();
       dom.amountInput.value = inputNumber(state.amount);
       renderCurrencyChips();
@@ -972,7 +991,7 @@
      --------------------------------------------------------- */
 
   function init() {
-    if (!RATES || !CARDS || !CURRENCIES) {
+    if (!RATES || !CARDS || !PATHS || !CURRENCIES) {
       console.error("汇率数据未加载。");
       return;
     }
@@ -985,7 +1004,8 @@
     renderCurrencyChips();
     updateCurrencyUI();
     renderNetworkControls();
-    renderCardParams();
+    renderPathParams();
+    renderPathTypes();
     bindEvents();
     renderResults();
 
@@ -998,6 +1018,7 @@
     init();
   }
 })();
+
 
 
 

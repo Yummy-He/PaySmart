@@ -30,6 +30,7 @@
           <a href="#compare">比较</a>
           <a href="#types">支付路径</a>
           <a href="#method">算法</a>
+          <a href="#data">数据</a>
         </nav>
         <div class="snapshot-pill" title="银行牌价快照时间">
           <span class="snapshot-dot" aria-hidden="true"></span>
@@ -48,10 +49,10 @@
               同样一笔外币消费，走银行购汇、卡组织入账，还是美元中转，最终可能差出一顿饭。<span class="nowrap">先算清，再付款。</span>
             </p>
             <div class="hero-meta" aria-label="功能概览">
-              <span>5 种支付路径</span>
+              <span>6 条支付路径</span>
               <span>4 家银行</span>
+              <span>8 张代表卡</span>
               <span>14 个币种</span>
-              <span>本地计算</span>
             </div>
           </div>
 
@@ -138,7 +139,7 @@
               <h2>先告诉我这笔消费。</h2>
             </div>
             <p class="section-side">
-              输入金额和币种，下面立刻按五种支付路径计算预计人民币入账。所有换算都在本地完成。
+              输入金额和币种，下面立刻按六条支付路径计算预计人民币入账。所有换算都在本地完成。
             </p>
           </div>
 
@@ -188,8 +189,8 @@
 
             <section class="ranking" aria-labelledby="rankingTitle">
               <div class="ranking-head">
-                <h3 id="rankingTitle">全部支付路径</h3>
-                <span>点击切换 · 从低到高</span>
+                <h3 id="rankingTitle">6 条支付路径</h3>
+                <span>点击路径查看 · 从低到高</span>
               </div>
               <div class="ranking-list" id="rankingList"></div>
               <div class="ranking-foot">
@@ -204,6 +205,7 @@
               <div>
                 <p class="route-kicker">这笔钱怎么走</p>
                 <h3 id="routeTitle">—</h3>
+                <p class="route-reps" id="routeReps"></p>
               </div>
               <span class="route-tag" id="routeTag">—</span>
             </div>
@@ -242,8 +244,8 @@
                   <div id="networkControls"></div>
                 </div>
                 <div>
-                  <p class="assumption-col-title">卡片费率与返现</p>
-                  <div class="param-list" id="cardParams"></div>
+                  <p class="assumption-col-title">路径费率与返现</p>
+                  <div class="param-list" id="pathParams"></div>
                 </div>
               </div>
 
@@ -277,100 +279,14 @@
           <div class="section-head">
             <div class="section-head-copy">
               <span class="section-index">02 / PAYMENT RAILS</span>
-              <h2>五种路径，<br />五种账单。</h2>
+              <h2>六种路径，<br />六种账单。</h2>
             </div>
             <p class="section-side">
-              不用记住每张卡。先认出它走哪条路径，汇率和费用就大致有数了。下面每类给几张代表卡。
+              不用记住每张卡。先认出它走哪条路径，汇率和费用就大致有数了。下面每条路径给一两张代表卡。
             </p>
           </div>
 
-          <div class="types-grid">
-            <article class="type-card">
-              <div class="type-top">
-                <span class="type-index">01</span>
-                <span class="type-icon">FX</span>
-              </div>
-              <h3>银行购汇<br />多币种直付</h3>
-              <p class="type-route">外币消费 → 外币账户 → 银行现汇卖出价</p>
-              <p class="type-copy">
-                交易币种能直接进入卡内外币账户，不经过卡组织二次折算。路径最短，代价是银行牌价本身的买卖点差。
-              </p>
-              <div class="type-bottom">
-                <span class="type-card-tag">工行 奋斗万事达</span>
-                <span class="type-note">币种不在账户列表内时，会先折美元。</span>
-              </div>
-            </article>
-
-            <article class="type-card">
-              <div class="type-top">
-                <span class="type-index">02</span>
-                <span class="type-icon">MULTI</span>
-              </div>
-              <h3>银行购汇<br />纯外币多币种</h3>
-              <p class="type-route">外币消费 → 外币账户 → 中行人民币卡购汇转入</p>
-              <p class="type-copy">
-                没有人民币账户，但支持多个外币币种。消费直接进入对应外币账户；还款时先用另一张中行人民币卡购汇，再转入外币账户。
-              </p>
-              <div class="type-bottom">
-                <span class="type-card-tag">中行 莫奈世界卡</span>
-                <span class="type-note">没有人民币账户，需另一张中行卡购汇。</span>
-              </div>
-            </article>
-
-            <article class="type-card">
-              <div class="type-top">
-                <span class="type-index">03</span>
-                <span class="type-icon">CNY</span>
-              </div>
-              <h3>卡组织汇率<br />人民币入账</h3>
-              <p class="type-route">外币消费 → 卡组织折人民币 → 人民币账单</p>
-              <p class="type-copy">
-                人民币账户直接收单，只经过一次卡组织折算，没有银行购汇环节。路径干净，最终汇率由入账日决定。
-              </p>
-              <div class="type-bottom">
-                <span class="type-card-tag">中行万事网联 / 招行万事达人民币卡</span>
-                <span class="type-note">一次折算，通常没有货币转换费。</span>
-              </div>
-            </article>
-
-            <article class="type-card">
-              <div class="type-top">
-                <span class="type-index">04</span>
-                <span class="type-icon">V</span>
-              </div>
-              <h3>美元中转<br />Visa 双币与全币种</h3>
-              <p class="type-route">外币消费 → Visa 折美元 → 银行美元卖出价</p>
-              <p class="type-copy">
-                典型美元账户卡：卡组织先折美元，银行再购汇。招行全币种通常 0 货转；交行双币卡叠加 1.5% 货转后，通常明显更贵。
-              </p>
-              <div class="type-bottom">
-                <span class="type-card-tag">招行 全币种 Visa / 交行 Visa 双币卡</span>
-                <span class="type-note">美元消费时，才会少一次转换。</span>
-              </div>
-            </article>
-
-            <article class="type-card type-card--wide">
-              <div class="type-content">
-                <div>
-                  <div class="type-top">
-                    <span class="type-index">05</span>
-                    <span class="type-icon">UP</span>
-                  </div>
-                  <h3>银联通道 · 人民币入账</h3>
-                  <p class="type-route">外币消费 → 银联折人民币 → 人民币账单</p>
-                </div>
-                <div>
-                  <p class="type-copy">
-                    双标卡走银联网络时，由银联直接折算人民币入账，没有银行购汇环节，通常也没有货币转换费。能否走银联，取决于收单网络；少数套卡若按外币账户入账后再转人民币，成本会更接近“多币种直付”。
-                  </p>
-                  <div class="type-bottom">
-                    <span class="type-card-tag">工行 银联双标 / 交行 银联环球卡</span>
-                    <span class="type-note">和卡组织人民币卡往往只差几个基点。</span>
-                  </div>
-                </div>
-              </div>
-            </article>
-          </div>
+          <div class="types-grid" id="pathTypes"></div>
 
           <p class="types-disclaimer">
             代表卡只用于说明支付路径，不构成办卡或产品推荐。卡组织、币种账户、货转费、返现规则均可能随产品与时间变化，请以发卡行最新条款为准。
@@ -409,7 +325,7 @@
               <span class="method-num">03</span>
               <h3>费用和返现，一起算</h3>
               <p>
-                货币转换费按折算后金额加收；返现和积分折现按比例抵扣。你可以在“汇率与费用假设”里把每张卡改成自己的真实费率。
+                货币转换费按折算后金额加收；返现和积分折现按比例抵扣。你可以在“汇率与费用假设”里把每条路径改成自己的真实费率。
               </p>
             </div>
           </div>
@@ -436,6 +352,92 @@
           </div>
         </div>
       </section>
+
+      <section class="data" id="data">
+        <div class="container">
+          <div class="section-head">
+            <div class="section-head-copy">
+              <span class="section-index">04 / DATA</span>
+              <h2>数据从哪来，<br />多久刷新？</h2>
+            </div>
+            <p class="section-side">
+              哪些是官网牌价，哪些只是可调假设，必须分开说清楚。否则“最优”只是一个看起来很精确的猜测。
+            </p>
+          </div>
+
+          <div class="data-grid">
+            <article class="data-card">
+              <div class="data-card-top">
+                <span class="data-status data-status--official">官网牌价</span>
+                <span class="data-num">01</span>
+              </div>
+              <h3>中行 · 工行 · 招行 · 交行</h3>
+              <p>
+                各银行官网的现汇买入价 / 现汇卖出价，按抓取时的牌价生成快照。页面不直接请求银行接口，避免跨域和密钥问题。
+              </p>
+              <div class="data-meta">
+                <span>更新方式</span>
+                <strong>运行脚本 / GitHub Action</strong>
+              </div>
+            </article>
+
+            <article class="data-card">
+              <div class="data-card-top">
+                <span class="data-status data-status--official">公开接口</span>
+                <span class="data-num">02</span>
+              </div>
+              <h3>ExchangeRate-API 中间价</h3>
+              <p>
+                仅作为卡组织汇率的基准。它不是银行成交价，也不代表卡组织最终入账价，只用来说明“中间价在哪里”。
+              </p>
+              <div class="data-meta">
+                <span>更新方式</span>
+                <strong>随牌价快照一起抓取</strong>
+              </div>
+            </article>
+
+            <article class="data-card">
+              <div class="data-card-top">
+                <span class="data-status data-status--assumption">建模假设</span>
+                <span class="data-num">03</span>
+              </div>
+              <h3>卡组织汇率加点</h3>
+              <p>
+                不是官方实时报价。默认万事达 +25bp、Visa +35bp、银联 +30bp，是用于比较的保守假设，可在下方假设面板逐项调整。
+              </p>
+              <div class="data-meta">
+                <span>更新方式</span>
+                <strong>手动调整</strong>
+              </div>
+            </article>
+
+            <article class="data-card">
+              <div class="data-card-top">
+                <span class="data-status data-status--assumption">示例假设</span>
+                <span class="data-num">04</span>
+              </div>
+              <h3>路径费率与返现</h3>
+              <p>
+                货转费按代表性产品的常见结构设置（0% 或 1.5%），返现默认 0。它们不是银行实时权益，也不是你的实际账单，请按自己的卡改。
+              </p>
+              <div class="data-meta">
+                <span>更新方式</span>
+                <strong>手动调整</strong>
+              </div>
+            </article>
+          </div>
+
+          <div class="data-refresh">
+            <div>
+              <span class="data-refresh-label">刷新策略</span>
+              <p>
+                本地和纯静态页面不会自动刷新牌价。部署到 GitHub 后，仓库内置的 Action 每 6 小时抓取一次并提交新快照，GitHub Pages 随后重新发布；已打开的页面刷新后才会看到新快照。本地可随时手动更新。
+              </p>
+            </div>
+            <code>npm run update-rates</code>
+          </div>
+        </div>
+      </section>
     </main>
 
     <footer class="site-footer">
@@ -449,7 +451,7 @@
             </div>
           </div>
           <p class="footer-note">
-            为“付款前的那一秒”而做。所有计算在浏览器本地完成，不上传金额、币种或卡片设置，也没有第三方脚本。
+            为“付款前的那一秒”而做。所有计算在浏览器本地完成，不上传金额、币种或路径设置，也没有第三方脚本。
           </p>
         </div>
         <div class="footer-bottom">

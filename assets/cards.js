@@ -192,6 +192,105 @@ window.FX_CARDS = [
   }
 ];
 
+window.FX_PATHS = [
+  {
+    id: "bank-multi",
+    index: "01",
+    name: "银行购汇 · 多币种直付",
+    shortName: "多币种直付",
+    mark: "FX",
+    art: "carbon",
+    primaryCardId: "icbc-multi",
+    representativeCardIds: ["icbc-multi"],
+    representativeLabel: "工行 奋斗万事达",
+    titleHtml: "银行购汇<br />多币种直付",
+    typeRoute: "外币消费 → 外币账户 → 银行现汇卖出价",
+    typeCopy:
+      "交易币种直接进入卡内外币账户，不经过卡组织二次折算。路径最短，代价是银行牌价本身的买卖点差。",
+    typeNote: "币种不在账户列表内时，会先折美元。"
+  },
+  {
+    id: "bank-pure-fx",
+    index: "02",
+    name: "银行购汇 · 纯外币多币种",
+    shortName: "纯外币多币种",
+    mark: "FX",
+    art: "ivory",
+    primaryCardId: "boc-monet",
+    representativeCardIds: ["boc-monet"],
+    representativeLabel: "中行 莫奈世界卡",
+    titleHtml: "银行购汇<br />纯外币多币种",
+    typeRoute: "外币消费 → 外币账户 → 中行人民币卡购汇转入",
+    typeCopy:
+      "没有人民币账户，但支持多个外币币种。消费直接进入对应外币账户；还款时先用另一张中行人民币卡购汇，再转入外币账户。",
+    typeNote: "没有人民币账户，需另一张中行卡购汇。"
+  },
+  {
+    id: "network-cny",
+    index: "03",
+    name: "卡组织汇率 · 人民币入账",
+    shortName: "卡组织人民币入账",
+    mark: "MC",
+    art: "tomato",
+    primaryCardId: "boc-mc-cny",
+    representativeCardIds: ["boc-mc-cny", "cmb-mc-cny"],
+    representativeLabel: "中行万事网联 / 招行万事达",
+    titleHtml: "卡组织汇率<br />人民币入账",
+    typeRoute: "外币消费 → 卡组织折人民币 → 人民币账单",
+    typeCopy:
+      "人民币账户直接收单，只经过一次卡组织折算，没有银行购汇环节。路径干净，最终汇率由入账日决定。",
+    typeNote: "一次折算，通常没有货币转换费。"
+  },
+  {
+    id: "usd-full",
+    index: "04",
+    name: "美元账户 · 全币种 Visa",
+    shortName: "全币种 Visa",
+    mark: "V",
+    art: "graphite",
+    primaryCardId: "cmb-visa",
+    representativeCardIds: ["cmb-visa"],
+    representativeLabel: "招行 全币种 Visa",
+    titleHtml: "美元中转<br />全币种 0 货转",
+    typeRoute: "外币消费 → Visa 折美元 → 招行美元卖出价",
+    typeCopy:
+      "全币种 Visa 仍是美元账户：卡组织先折美元，银行再购汇。通常 0 货币转换费，但非美元消费仍经历两次折算。",
+    typeNote: "0 货转，但仍有两次转换。"
+  },
+  {
+    id: "usd-dual",
+    index: "05",
+    name: "美元账户 · 双币 Visa",
+    shortName: "双币 Visa",
+    mark: "V",
+    art: "forest",
+    primaryCardId: "bocom-visa",
+    representativeCardIds: ["bocom-visa"],
+    representativeLabel: "交行 Visa 双币卡",
+    titleHtml: "美元中转<br />双币卡 1.5% 货转",
+    typeRoute: "外币消费 → Visa 折美元 → 交行美元卖出价",
+    typeCopy:
+      "典型美元账户双币卡：卡组织先折美元，银行再购汇。若再叠加 1.5% 货转费，通常是几条路径里最贵的。",
+    typeNote: "美元消费时，才会少一次转换。"
+  },
+  {
+    id: "unionpay",
+    index: "06",
+    name: "银联通道 · 人民币入账",
+    shortName: "银联人民币入账",
+    mark: "UP",
+    art: "sand",
+    primaryCardId: "icbc-unionpay",
+    representativeCardIds: ["icbc-unionpay", "bocom-unionpay"],
+    representativeLabel: "工行银联双标 / 交行银联环球",
+    titleHtml: "银联通道 · 人民币入账",
+    typeRoute: "外币消费 → 银联折人民币 → 人民币账单",
+    typeCopy:
+      "双标卡走银联网络时，由银联直接折算人民币入账，没有银行购汇环节，通常也没有货币转换费。能否走银联，取决于收单网络。",
+    typeNote: "和卡组织人民币卡往往只差几个基点。"
+  }
+];
+
 window.FX_CURRENCIES = [
   { code: "USD", name: "美元", symbol: "US$", decimals: 2 },
   { code: "EUR", name: "欧元", symbol: "€", decimals: 2 },

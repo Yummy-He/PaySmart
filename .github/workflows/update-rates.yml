@@ -1,0 +1,37 @@
+name: Refresh FX snapshot
+
+on:
+  schedule:
+    # Every 6 hours, at :17 UTC. Beijing time: 02:17, 08:17, 14:17, 20:17.
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Fetch bank quotes and mid-market rates
+        run: npm run update-rates
+
+      - name: Commit updated snapshot
+        run: |
+          if git diff --quiet -- assets/rates.js; then
+            echo "No rate changes."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/rates.js
+          git commit -m "chore: refresh FX snapshot"
+          git push
