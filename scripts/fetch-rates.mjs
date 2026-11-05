@@ -20,6 +20,7 @@ import crypto from "node:crypto";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const BOC_URL = "https://www.boc.cn/sourcedb/whpj/";
+const BOC_ALTERNATE_URL = "https://www.bankofchina.com/sourcedb/whpj/";
 const ICBC_URL = "https://papi.icbc.com.cn/exchanges/ns/getLatest";
 const CMB_URL = "https://fx.cmbchina.com/api/v1/fx/rate";
 const BOCOM_URL =
@@ -161,10 +162,10 @@ function parseBoc(html) {
       cell[1].replace(/<[^>]+>/g, "").trim()
     );
 
-    if (cells.length < 8) continue;
+    if (cells.length < 7) continue;
     const buy = Number.parseFloat(cells[1]);
     const sell = Number.parseFloat(cells[3]);
-    const published = `${cells[6]} ${cells[7]}`;
+    const published = cells[6].includes(" ") ? cells[6] : `${cells[6]} ${cells[7] || ""}`;
 
     if (isPositiveRate(buy) && isPositiveRate(sell)) {
       result[code] = {
@@ -277,7 +278,37 @@ function parseKylcRate(html) {
   };
 }
 
-async function fetchKylcPair(brand, account, code) {
+function parseKylcOverview(html, today) {
+  const brands = { Visa: "visa", 万事达: "mastercard", 中国银联: "unionpay" };
+  const accounts = { 美元卡: "usd", 人民币卡: "cny" };
+  const result = new Map();
+  for (const row of html.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)) {
+    const cells = Array.from(row[1].matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/gi), (cell) =>
+      stripHtml(cell[1]).trim()
+    );
+    const [brandName, accountName, currency, value, label] = cells;
+    const brand = brands[brandName];
+    const account = accounts[accountName];
+    const code = currency === "马来西亚元" ? "MYR" : BOC_NAME_TO_CODE[currency];
+    const rate = Number(value);
+    const parts = label?.match(/^(\d{1,2})月(\d{1,2})日$/);
+    if (!brand || !account || !code || !isPositiveRate(rate) || !parts) continue;
+    const monthDay = parts.slice(1).map((part) => part.padStart(2, "0")).join("-");
+    const year = Number(today.slice(0, 4)) - (monthDay > today.slice(5) ? 1 : 0);
+    const date = `${year}-${monthDay}`;
+    const key = `${brand}/${account}/${code}`;
+    if (!result.has(key) || date > result.get(key).date) result.set(key, { rate, date });
+  }
+  return result;
+}
+
+function parseKylcHistory(html) {
+  const row = stripHtml(html).match(/(\d{4})年(\d{2})月(\d{2})日\s+([\d.]+)\s+消费/);
+  if (!row || !isPositiveRate(Number(row[4]))) return null;
+  return { date: row.slice(1, 4).join("-"), rate: Number(row[4]) };
+}
+
+async function fetchKylcPair(brand, account, code, minimumDate) {
   const url =
     brand === "unionpay"
       ? `${KYLC_BASE}/uprate/${code.toLowerCase()}.html`
@@ -285,8 +316,14 @@ async function fetchKylcPair(brand, account, code) {
 
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
-      const parsed = parseKylcRate(await getText(url));
-      if (parsed) return { ...parsed, url };
+      const useHistory = attempt === 2 && brand !== "unionpay";
+      const endpoint = useHistory
+        ? `${KYLC_BASE}/huilv/cardtrend/${brand}/${account}/${code.toLowerCase()}.html`
+        : url;
+      const parse = useHistory ? parseKylcHistory : parseKylcRate;
+      const parsed = parse(await getText(endpoint));
+      if (parsed && parsed.date >= minimumDate) return parsed;
+      throw new Error("No recent quote on this page");
     } catch (error) {
       if (attempt === 3) {
         console.warn(`Kylc rate unavailable: ${brand}/${account}/${code} (${error.message})`);
@@ -374,7 +411,8 @@ async function main() {
   let boc;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
-      const quotes = parseBoc(await getText(BOC_URL));
+      const url = attempt === 2 ? BOC_ALTERNATE_URL : BOC_URL;
+      const quotes = parseBoc(await getText(url));
       const missing = currencyCodes.filter((code) => !quotes[code]);
       if (missing.length) throw new Error(`Missing quotes: ${missing.join(", ")}`);
       boc = quotes;
@@ -463,12 +501,27 @@ async function main() {
     pairTasks.push({ brand: "unionpay", account: "cny", code });
   }
 
-  const networkResults = await mapLimit(pairTasks, 3, (task) =>
-    fetchKylcPair(task.brand, task.account, task.code).then((result) => ({
-      ...task,
-      ...(result || {})
-    }))
-  );
+  const dateFormat = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Shanghai" });
+  const oldestDate = dateFormat.format(new Date(Date.now() - 4 * 86400000));
+  let overview = new Map();
+  try {
+    overview = parseKylcOverview(await getText(`${KYLC_BASE}/huilv`), dateFormat.format(new Date()));
+  } catch (error) {
+    console.warn(`Kylc overview unavailable: ${error.message}`);
+  }
+  let overviewCount = 0;
+  const networkResults = await mapLimit(pairTasks, 3, async (task) => {
+    const { brand, account, code } = task;
+    const previousDate = previousData?.networks?.[brand]?.pairDates?.[account]?.[code] || "";
+    const minimumDate = previousDate > oldestDate ? previousDate : oldestDate;
+    const quote = overview.get(`${brand}/${account}/${code}`);
+    if (quote && quote.date >= minimumDate) {
+      overviewCount += 1;
+      return { ...task, ...quote };
+    }
+    return { ...task, ...await fetchKylcPair(brand, account, code, minimumDate) };
+  });
+  console.log(`Kylc overview supplied ${overviewCount}/${pairTasks.length} currency pairs`);
   const carriedNetworkRates = [];
   for (const item of networkResults) {
     if (isPositiveRate(item.rate)) continue;
