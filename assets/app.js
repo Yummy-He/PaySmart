@@ -228,7 +228,9 @@
   function networkRateNote(networkKey, account, code) {
     const network = RATES.networks?.[networkKey];
     if (!Number.isFinite(network?.[account]?.[code])) return "按中间价估算";
-    return network.pairDates?.[account]?.[code] || "快易理财网查询价";
+    const date = network.pairDates?.[account]?.[code] || "快易理财网查询价";
+    return RATES.carriedNetworkRates?.includes(`${networkKey}/${account}/${code}`)
+      ? `${date} · 沿用上次有效报价` : date;
   }
 
   function computePath(path) {
@@ -589,8 +591,13 @@
         <strong>${rate(mid, code)}</strong>
       </div>
       ${bankRows}`;
-    dom.factNote.textContent = RATES.archiveNote ||
+    const carried = [
+      RATES.banks.boc?.carriedFrom && `中行沿用 ${RATES.banks.boc.carriedFrom} 快照的牌价。`,
+      RATES.carriedNetworkRates?.length && `${RATES.carriedNetworkRates.length} 个卡组织币种对沿用上次有效报价。`
+    ].filter(Boolean).join(" ");
+    const note = RATES.archiveNote ||
       `牌价快照 ${RATES.asOfLabel}。卡组织汇率来自快易理财网；缺失牌价时，替用来源会标在路径详情中。`;
+    dom.factNote.textContent = carried ? `${note} ${carried}` : note;
   }
 
   function renderFocusCard(focus, winner, results) {

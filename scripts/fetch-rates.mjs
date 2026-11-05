@@ -283,16 +283,16 @@ async function fetchKylcPair(brand, account, code) {
       ? `${KYLC_BASE}/uprate/${code.toLowerCase()}.html`
       : `${KYLC_BASE}/huilv/i-${brand}/${account}/${code.toLowerCase()}.html`;
 
-  for (let attempt = 1; attempt <= 2; attempt += 1) {
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
       const parsed = parseKylcRate(await getText(url));
       if (parsed) return { ...parsed, url };
     } catch (error) {
-      if (attempt === 2) {
+      if (attempt === 3) {
         console.warn(`Kylc rate unavailable: ${brand}/${account}/${code} (${error.message})`);
       }
     }
-    await new Promise((resolvePromise) => setTimeout(resolvePromise, 250 * attempt));
+    if (attempt < 3) await new Promise((resolvePromise) => setTimeout(resolvePromise, 1500 * attempt));
   }
   return null;
 }
@@ -359,9 +359,35 @@ async function archiveSnapshot(folder, snapshot) {
 }
 
 async function main() {
+  const target = resolve(ROOT, "assets/rates.js");
+  let previous;
+  try {
+    previous = await readFile(target, "utf8");
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+  const previousData = previous
+    ? JSON.parse(previous.slice(previous.indexOf("{"), previous.lastIndexOf("}") + 1))
+    : null;
+  const currencyCodes = Object.keys(CURRENCIES);
   console.log("Fetching BOC quotes...");
-  const bocHtml = await getText(BOC_URL);
-  const boc = parseBoc(bocHtml);
+  let boc;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const quotes = parseBoc(await getText(BOC_URL));
+      const missing = currencyCodes.filter((code) => !quotes[code]);
+      if (missing.length) throw new Error(`Missing quotes: ${missing.join(", ")}`);
+      boc = quotes;
+      break;
+    } catch (error) {
+      console.warn(`BOC attempt ${attempt}: ${error.code || error.message}`);
+      if (attempt < 3) await new Promise((done) => setTimeout(done, attempt * 2000));
+    }
+  }
+  const previousBoc = previousData?.banks?.boc;
+  if (!boc && !currencyCodes.every((code) => isPositiveRate(previousBoc?.rates?.[code]?.sell))) {
+    throw new Error("BOC unavailable and no complete previous BOC snapshot");
+  }
 
   console.log("Fetching ICBC quotes...");
   const icbcPayload = JSON.parse(
@@ -412,7 +438,6 @@ async function main() {
   }
 
   for (const code of Object.keys(CURRENCIES)) {
-    if (!boc[code]) throw new Error(`BOC missing ${code}`);
     if (!icbc[code]) throw new Error(`ICBC missing ${code}`);
     if (!isPositiveRate(midPayload.rates?.[code])) throw new Error(`Mid-market invalid or missing ${code}`);
   }
@@ -425,7 +450,6 @@ async function main() {
   }
 
   console.log("Fetching Visa / Mastercard / UnionPay card-network rates...");
-  const currencyCodes = Object.keys(CURRENCIES);
   const pairTasks = [];
   for (const brand of ["visa", "mastercard"]) {
     for (const code of currencyCodes) {
@@ -439,13 +463,26 @@ async function main() {
     pairTasks.push({ brand: "unionpay", account: "cny", code });
   }
 
-  const networkResults = await mapLimit(pairTasks, 4, (task) =>
+  const networkResults = await mapLimit(pairTasks, 3, (task) =>
     fetchKylcPair(task.brand, task.account, task.code).then((result) => ({
       ...task,
       ...(result || {})
     }))
   );
-  const missingNetworkRates = networkResults.filter((item) => !Number.isFinite(item.rate));
+  const carriedNetworkRates = [];
+  for (const item of networkResults) {
+    if (isPositiveRate(item.rate)) continue;
+    const previousNetwork = previousData?.networks?.[item.brand];
+    const rate = previousNetwork?.[item.account]?.[item.code];
+    if (!isPositiveRate(rate)) continue;
+    item.rate = rate;
+    item.date = previousNetwork.pairDates?.[item.account]?.[item.code] || "";
+    carriedNetworkRates.push(`${item.brand}/${item.account}/${item.code}`);
+  }
+  if (carriedNetworkRates.length) {
+    console.warn(`Reused ${carriedNetworkRates.length} card-network rates: ${carriedNetworkRates.join(", ")}`);
+  }
+  const missingNetworkRates = networkResults.filter((item) => !isPositiveRate(item.rate));
   if (missingNetworkRates.length) {
     throw new Error(
       `Kylc missing ${missingNetworkRates.length} card-network rates: ${missingNetworkRates
@@ -504,12 +541,12 @@ async function main() {
     ],
     mid,
     banks: {
-      boc: {
+      boc: boc ? {
         label: "中国银行",
         short: "中行",
         updated: boc.USD.published.split(" ")[1]?.slice(0, 5) || "",
         rates: compactRates(boc)
-      },
+      } : { ...previousBoc, carriedFrom: previousBoc.carriedFrom || previousData.asOfLabel },
       icbc: {
         label: "中国工商银行",
         short: "工行",
@@ -541,19 +578,13 @@ async function main() {
         rates: compactRates(abc)
       }
     },
-    networks: networkData
+    networks: networkData,
+    carriedNetworkRates
   };
 
-  const target = resolve(ROOT, "assets/rates.js");
   const history = resolve(dirname(target), "history");
   await mkdir(history, { recursive: true });
   const snapshot = `/*\n * 牌价快照。由 scripts/fetch-rates.mjs 生成。\n * 银行牌价单位：人民币 / 1 外币。\n * 中间价单位：人民币 / 1 外币。\n */\nwindow.FX_RATES = ${JSON.stringify(data, null, 2)};\n`;
-  let previous;
-  try {
-    previous = await readFile(target, "utf8");
-  } catch (error) {
-    if (error.code !== "ENOENT") throw error;
-  }
   if (previous) await archiveSnapshot(history, previous);
   await archiveSnapshot(history, snapshot);
   const days = (await readdir(history))
