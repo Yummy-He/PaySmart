@@ -55,6 +55,7 @@ jobs:
     needs: refresh
     if: ${{ !cancelled() && (needs.refresh.result == 'success' || needs.refresh.result == 'skipped') }}
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     permissions:
       contents: read
       pages: write
@@ -81,3 +82,5 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          timeout: 1200000
