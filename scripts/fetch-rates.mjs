@@ -72,6 +72,7 @@ function getText(url, options = {}) {
         path: target.pathname + target.search,
         method: options.method || "GET",
         agent: legacyAgent,
+        autoSelectFamilyAttemptTimeout: 3000,
         timeout: 30000,
         headers: {
           "user-agent":
@@ -428,14 +429,24 @@ async function main() {
   }
 
   console.log("Fetching ICBC quotes...");
-  const icbcPayload = JSON.parse(
-    await getText(ICBC_URL, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: "{}"
-    })
-  );
-  const icbc = parseIcbc(icbcPayload);
+  let icbc;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const payload = JSON.parse(await getText(ICBC_URL, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}"
+      }));
+      const quotes = parseIcbc(payload);
+      if (!currencyCodes.every((code) => quotes[code])) throw new Error("Incomplete ICBC quotes");
+      icbc = quotes;
+      break;
+    } catch (error) {
+      console.warn(`ICBC attempt ${attempt}: ${error.code || error.message}`);
+      if (attempt === 3) throw error;
+      await new Promise((done) => setTimeout(done, attempt * 3000));
+    }
+  }
 
   console.log("Fetching CMB quotes...");
   let cmb = {};
