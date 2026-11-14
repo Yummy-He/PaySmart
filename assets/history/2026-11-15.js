@@ -4,8 +4,8 @@
  * 中间价单位：人民币 / 1 外币。
  */
 window.FX_HISTORICAL_RATES = {
-  "fetchedAt": "2026-11-14T18:46:50.176Z",
-  "asOfLabel": "2026年11月15日 02:46",
+  "fetchedAt": "2026-11-14T23:12:03.981Z",
+  "asOfLabel": "2026年11月15日 07:12",
   "sources": [
     {
       "name": "中国银行外汇牌价",
@@ -60,7 +60,7 @@ window.FX_HISTORICAL_RATES = {
     "boc": {
       "label": "中国银行",
       "short": "中行",
-      "updated": "00:00",
+      "updated": "05:30",
       "rates": {
         "AUD": {
           "buy": 4.5069,
@@ -186,7 +186,7 @@ window.FX_HISTORICAL_RATES = {
     "cmb": {
       "label": "招商银行",
       "short": "招行",
-      "updated": "02:46",
+      "updated": "07:11",
       "rates": {
         "HKD": {
           "buy": 0.8487,
@@ -256,7 +256,7 @@ window.FX_HISTORICAL_RATES = {
     "citic": {
       "label": "中信银行",
       "short": "中信",
-      "updated": "2026年11月15日 00:00:03",
+      "updated": "2026年11月15日 03:00:02",
       "rates": {
         "USD": {
           "buy": 6.6595,
@@ -315,7 +315,7 @@ window.FX_HISTORICAL_RATES = {
     "abc": {
       "label": "中国农业银行",
       "short": "农行",
-      "updated": "2026-11-15 02:46:30",
+      "updated": "2026-11-15 07:11:32",
       "rates": {
         "GBP": {
           "buy": 8.78719,
